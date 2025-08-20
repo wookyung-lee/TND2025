@@ -1,6 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 # Hindmarsh-Rose model equations
 def hr_model(state, I, r):
@@ -30,17 +31,31 @@ def integrate_hr(I, r, T=1500, dt=0.005, init_state=(-1.0, 2.0, 0.5)):
     return t_vals, x_vals
 
 
+# cases = {
+#     "2(a) Periodic spikes (I=3.5, r=0.003)": (3.5, 0.003),
+#     "2(b) Chaotic spikes (I=3.34, r=0.003)": (3.34, 0.003),
+#     "2(c) Periodic bursts (3 spikes/burst, I=1.67, r=0.003)": (1.67, 0.003),
+#     "2(d) Periodic bursts (9 spikes/burst, I=3.2, r=0.003)": (3.2, 0.003),
+#     "2(e) Chaotic bursts (I=3.29, r=0.003)": (3.29, 0.003),
+# }
+
 cases = {
-    "2(a) Periodic spikes (I=3.5, r=0.003)": (3.5, 0.003),
-    "2(b) Chaotic spikes (I=3.34, r=0.003)": (3.34, 0.003),
-    "2(c) Periodic bursts (3 spikes/burst, I=1.67, r=0.003)": (1.67, 0.003),
-    "2(d) Periodic bursts (9 spikes/burst, I=3.2, r=0.003)": (3.2, 0.003),
-    "2(e) Chaotic bursts (I=3.29, r=0.003)": (3.29, 0.003),
+    "a": (3.5, 0.003),
+    "b": (3.34, 0.003),
+    "c": (1.67, 0.003),
+    "d": (3.2, 0.003),
+    "e": (3.29, 0.003),
 }
 
-#Plots
+# Used in problem B
+all_data = {}
+
+# Plots & Collect data
 for label, (I, r) in cases.items():
     t, x = integrate_hr(I, r)
+
+    all_data[label] = {'time': t, 'x': x}
+
     plt.figure(figsize=(10, 4))
     plt.plot(t, x, lw=0.5, color="blue")
     plt.title(f"Problem A.{label}")
@@ -48,4 +63,9 @@ for label, (I, r) in cases.items():
     plt.ylabel("Membrane potential x(t)")
     plt.xlim([200, 1500])
     plt.tight_layout()
-    plt.show()
+
+    # Save plots
+    # script_dir = os.path.dirname(os.path.abspath(__file__))  # folder of the script
+    # plt.savefig(os.path.join(script_dir, f"Figure_A2_{label}.png"), dpi=300)
+    
+    # plt.show()
