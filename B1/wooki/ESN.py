@@ -37,7 +37,7 @@ class ESN:
         Wres[Wres != 0] = np.random.uniform(-1, 1, size=np.count_nonzero(Wres))
 
         # Scale weights to achieve desired spectral radius
-        eigvals = torch.linalg.eigvals(Wres)
+        eigvals = np.linalg.eigvals(Wres)
         max_eig = max(abs(eigvals))
         if max_eig > 0:
             Wres *= self.rho / max_eig

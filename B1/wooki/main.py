@@ -1,7 +1,8 @@
 import sys
 import os
 import numpy as np
-from ESN2 import *
+import matplotlib.pyplot as plt
+from B1.wooki.ESN import *
 
 # Import dictionary
 data_folder = os.path.abspath('A2')
@@ -39,6 +40,7 @@ for label in problems:
         nrmse = esn.train(u_train, y_train)
         nrmse_list.append(nrmse)
     results[label]['Nres'] = (Nres_list, nrmse_list)
+    print(f"Nres done, {label}")
 
     # NRMSE for p
     nrmse_list = []
@@ -47,6 +49,7 @@ for label in problems:
         nrmse = esn.train(u_train, y_train)
         nrmse_list.append(nrmse)
     results[label]['p'] = (p_list, nrmse_list)
+    print(f"p done, {label}")
 
     # NRMSE for alpha
     nrmse_list = []
@@ -55,6 +58,7 @@ for label in problems:
         nrmse = esn.train(u_train, y_train)
         nrmse_list.append(nrmse)
     results[label]['alpha'] = (alpha_list, nrmse_list)
+    print(f"alpha done, {label}")
 
     # NRMSE for rho
     nrmse_list = []
@@ -63,4 +67,27 @@ for label in problems:
         nrmse = esn.train(u_train, y_train)
         nrmse_list.append(nrmse)
     results[label]['rho'] = (rho_list, nrmse_list)
+    print(f"rho done, {label}")
 
+# script folder
+base_dir = os.path.dirname(os.path.abspath(__file__)) 
+
+# Plot
+for label in problems:
+    # Create a folder for this label if it doesn't exist
+    label_dir = os.path.join(base_dir, f"A2_{label}")
+    os.makedirs(label_dir, exist_ok=True)
+
+    for param in ['Nres', 'p', 'alpha', 'rho']:
+        x_vals, y_vals = results[label][param]
+        plt.figure()
+        plt.plot(x_vals, y_vals, marker='o')
+        plt.xlabel(param)
+        plt.ylabel("NRMSE")
+        plt.title(f"NRMSE vs {param} (Regime {label})")
+        plt.grid(True)
+        plt.tight_layout()
+
+        # Save the plot inside the label folder
+        filename = f"{param}.png"
+        plt.savefig(os.path.join(label_dir, filename), dpi=300)
