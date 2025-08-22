@@ -5,12 +5,6 @@ import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
 from ESN import * 
 
-# prompt to copy files from local directory to server
-# scp C:\Users\prizl\Documents\GitHub\TND2025\B1\main.py qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/
-
-# prompt to copy plots generated inside the cip-pool server to local directory
-# scp -r qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/A2_* "C:/Users/prizl/Documents/GitHub/TND2025/B1/plots"
-
 # Import dictionary
 data_folder = os.path.abspath('A2')
 sys.path.insert(0, data_folder)
@@ -56,42 +50,6 @@ for label in problems:
         results[label][param_name] = (param_list, nrmse_list)
         print(f"{param_name} done, {label}")
               
-    # # NRMSE for Nres
-    # nrmse_list = []
-    # for Nres in Nres_list:
-    #     esn = ESN(Nres=Nres, p=0.75, alpha=0.5, rho=0.85, random_state=111)
-    #     nrmse = esn.train(u_train, y_train)
-    #     nrmse_list.append(nrmse)
-    # results[label]['Nres'] = (Nres_list, nrmse_list)
-    # print(f"Nres done, {label}")
-
-    # # NRMSE for p
-    # nrmse_list = []
-    # for p in p_list:
-    #     esn = ESN(Nres=300, p=p, alpha=0.5, rho=0.85, random_state=111)
-    #     nrmse = esn.train(u_train, y_train)
-    #     nrmse_list.append(nrmse)
-    # results[label]['p'] = (p_list, nrmse_list)
-    # print(f"p done, {label}")
-
-    # # NRMSE for alpha
-    # nrmse_list = []
-    # for alpha in alpha_list:
-    #     esn = ESN(Nres=300, p=0.75, alpha=alpha, rho=0.85, random_state=111)
-    #     nrmse = esn.train(u_train, y_train)
-    #     nrmse_list.append(nrmse)
-    # results[label]['alpha'] = (alpha_list, nrmse_list)
-    # print(f"alpha done, {label}")
-
-    # # NRMSE for rho
-    # nrmse_list = []
-    # for rho in rho_list:
-    #     esn = ESN(Nres=300, p=0.75, alpha=0.5, rho=rho, random_state=111)
-    #     nrmse = esn.train(u_train, y_train)
-    #     nrmse_list.append(nrmse)
-    # results[label]['rho'] = (rho_list, nrmse_list)
-    # print(f"rho done, {label}")
-
 # script folder
 base_dir = os.path.dirname(os.path.abspath(__file__)) 
 
@@ -114,3 +72,14 @@ for label in problems:
         # Save the plot inside the label folder
         filename = f"{param}.png"
         plt.savefig(os.path.join(label_dir, filename), dpi=300)
+
+# prompt to open a shell session into the server (cip3a0.cip.cs.fau) and land directly in that directory (/proj/ciptmp/qi24jovo/tnd2025)
+# ssh qi24jovo@cip3a0.cip.cs.fau
+# cd /proj/ciptmp/qi24jovo/tnd2025
+
+
+# prompt to copy files from local directory to server
+# scp C:\Users\prizl\Documents\GitHub\TND2025\B1\main.py qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/
+
+# prompt to copy plots generated inside the cip-pool server to local directory
+# scp -r qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/A2_* "C:/Users/prizl/Documents/GitHub/TND2025/B1/plots"
