@@ -2,7 +2,7 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from ESN import * 
+from ESN_cpu import * 
 
 # Import dictionary
 data_folder = os.path.abspath('A2')
@@ -75,8 +75,6 @@ for label in problems:
         nrmse_list.append(nrmse)
     results[label]['rho'] = (rho_list, nrmse_list)
     print(f"rho done, {label}")
-import os
-import matplotlib.pyplot as plt
 
 # Base directory of the script
 base_dir = os.path.dirname(os.path.abspath(__file__))

@@ -14,7 +14,6 @@ from A2 import all_data
 def compute_nrmse(param_name, param_value, u_train, y_train):
     kwargs = {'Nres': 300, 'p': 0.75, 'alpha': 0.5, 'rho': 0.85, 'random_state': 111}
     kwargs[param_name] = param_value
-    kwargs['random_state'] = 111
     esn = ESN(**kwargs)    
 
     return esn.train(u_train, y_train)
