@@ -7,7 +7,7 @@ import math
 
 
 # Simulation batch size hyper parameter
-batch_size = 200
+batch_size = 367
 
 # Run on GPU if possible
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -168,7 +168,7 @@ def plot(logrs:np.ndarray, logISIs:list):
     plt.ylabel("log(ISI)")
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("Prob-A-1b.png")
+    plt.savefig("Prob-A-1b.png", dpi=600, bbox_inches='tight', pad_inches=0.01)
     plt.show()
 
 
