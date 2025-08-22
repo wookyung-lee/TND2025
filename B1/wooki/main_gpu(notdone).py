@@ -2,8 +2,10 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-# from B1.wooki.ESN import *
-from ESN import * 
+
+sys.path.insert(0, os.path.abspath("."))  # current directory
+
+from B1.wooki.ESN import *
 
 # Import dictionary
 data_folder = os.path.abspath('A2')
@@ -37,7 +39,7 @@ for label in problems:
     # NRMSE for Nres
     nrmse_list = []
     for Nres in Nres_list:
-        esn = ESN(Nres=Nres, p=0.75, alpha=0.5, rho=0.85, random_state=111)
+        esn = ESN(Nres=Nres, p=0.75, alpha=0.5, rho=0.85, random_state=42)
         nrmse = esn.train(u_train, y_train)
         nrmse_list.append(nrmse)
     results[label]['Nres'] = (Nres_list, nrmse_list)
@@ -46,7 +48,7 @@ for label in problems:
     # NRMSE for p
     nrmse_list = []
     for p in p_list:
-        esn = ESN(Nres=300, p=p, alpha=0.5, rho=0.85, random_state=111)
+        esn = ESN(Nres=300, p=p, alpha=0.5, rho=0.85, random_state=42)
         nrmse = esn.train(u_train, y_train)
         nrmse_list.append(nrmse)
     results[label]['p'] = (p_list, nrmse_list)
@@ -55,7 +57,7 @@ for label in problems:
     # NRMSE for alpha
     nrmse_list = []
     for alpha in alpha_list:
-        esn = ESN(Nres=300, p=0.75, alpha=alpha, rho=0.85, random_state=111)
+        esn = ESN(Nres=300, p=0.75, alpha=alpha, rho=0.85, random_state=42)
         nrmse = esn.train(u_train, y_train)
         nrmse_list.append(nrmse)
     results[label]['alpha'] = (alpha_list, nrmse_list)
@@ -64,22 +66,22 @@ for label in problems:
     # NRMSE for rho
     nrmse_list = []
     for rho in rho_list:
-        esn = ESN(Nres=300, p=0.75, alpha=0.5, rho=rho, random_state=111)
+        esn = ESN(Nres=300, p=0.75, alpha=0.5, rho=rho, random_state=42)
         nrmse = esn.train(u_train, y_train)
         nrmse_list.append(nrmse)
     results[label]['rho'] = (rho_list, nrmse_list)
     print(f"rho done, {label}")
 
-# script folder
-base_dir = os.path.dirname(os.path.abspath(__file__)) 
+# ---------------- MODIFIED PLOT-SAVING SECTION ----------------
 
 # Plot
 for label in problems:
-    # Create a folder for this label if it doesn't exist
-    label_dir = os.path.join(base_dir, f"A2_{label}")
-    os.makedirs(label_dir, exist_ok=True)
 
-    for param in ['Nres', 'p', 'alpha', 'rho']: 
+    # Safe base folder for plots
+    base_dir = os.path.expanduser("~/plots")  # creates a 'plots' folder in your home
+    os.makedirs(base_dir, exist_ok=True)
+
+    for param in ['Nres', 'p', 'alpha', 'rho']:
         x_vals, y_vals = results[label][param]
         plt.figure()
         plt.plot(x_vals, y_vals, marker='o')
@@ -89,6 +91,10 @@ for label in problems:
         plt.grid(True)
         plt.tight_layout()
 
-        # Save the plot inside the label folder
-        filename = f"{param}.png"
-        plt.savefig(os.path.join(label_dir, filename), dpi=300)
+        # Save the plot inside the safe folder
+        filename = f"GPU-A2_{label}_{param}.png"  # include label in filename
+        plt.savefig(os.path.join(base_dir, filename), dpi=300)
+        plt.close()  # close figure to save memory
+
+print(f"All plots saved in {base_dir}")
+# ---------------- END OF MODIFIED SECTION ----------------
