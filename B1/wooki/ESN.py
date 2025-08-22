@@ -1,12 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
-from sklearn.linear_model import Ridge
 import torch
 
+# scp C:\Users\prizl\Documents\GitHub\TND2025\B1\wooki\ESN.py qi24jovo@cip3a0.cip.cs.fau.de:~
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
- 
 class ESN:
     def __init__(self, Nres=300, p=0.75, alpha=0.5, rho=0.85, lambda_reg=1e-6, random_state=None):
         self.Nres = Nres
@@ -37,7 +36,8 @@ class ESN:
         Wres[Wres != 0] = np.random.uniform(-1, 1, size=np.count_nonzero(Wres))
 
         # Scale weights to achieve desired spectral radius
-        eigvals = np.linalg.eigvals(Wres)
+        Wres = torch.tensor(Wres, device='cuda')  # or device='cpu' if CPU
+        eigvals = torch.linalg.eigvals(Wres)
         max_eig = max(abs(eigvals))
         if max_eig > 0:
             Wres *= self.rho / max_eig
@@ -63,7 +63,10 @@ class ESN:
 
         # Closed-form Ridge regression (Tikhonov) on GPU
         I = torch.eye(self.Nres, device=device)
-        self.Wout = torch.linalg.solve(X_res @ X_res.T + self.lambda_reg * I, X_res @ y_train)
+        A = X_res @ X_res.T + self.lambda_reg * I
+        B = X_res @ y_train
+        self.Wout = torch.linalg.solve(A, B)
+        # self.Wout = np.linalg.solve(X_res @ X_res.T + self.lambda_reg * I, X_res @ y_train)
 
         # Predict on training set
         y_pred = X_res.T @ self.Wout
