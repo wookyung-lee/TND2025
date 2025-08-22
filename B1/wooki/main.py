@@ -3,7 +3,6 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
-# from B1.wooki.ESN import *
 from ESN import * 
 # scp C:\Users\prizl\Documents\GitHub\TND2025\B1\wooki\main.py qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/
 
@@ -16,7 +15,9 @@ from A2 import all_data
 def compute_nrmse(param_name, param_value, u_train, y_train):
     kwargs = {'Nres': 300, 'p': 0.75, 'alpha': 0.5, 'rho': 0.85, 'random_state': 111}
     kwargs[param_name] = param_value
-    esn = ESN(**kwargs)
+    kwargs['random_state'] = 111
+    esn = ESN(**kwargs)    
+
     return esn.train(u_train, y_train)
 
 # Hyperparameters
@@ -43,12 +44,10 @@ for label in problems:
 
     results[label] = {}
 
-    for param_name, param_list in zip(['Nres', 'p', 'alpha', 'rho'], 
-                                      [Nres_list, p_list, alpha_list, rho_list]):
+    for param_name, param_list in zip(['Nres', 'p', 'alpha', 'rho'], [Nres_list, p_list, alpha_list, rho_list]):
         # Parallel evaluation of NRMSE for all values
-        nrmse_list = Parallel(n_jobs=2)(
-            delayed(compute_nrmse)(param_name, val, u_train, y_train) for val in param_list
-        )
+        nrmse_list = Parallel(n_jobs=2)(delayed(compute_nrmse)(param_name, val, u_train, y_train) for val in param_list) # 2x faster than not using Parallel 
+        # nrmse_list = [compute_nrmse(param_name, val, u_train, y_train) for val in param_list] # took 10 min from a to b
         results[label][param_name] = (param_list, nrmse_list)
         print(f"{param_name} done, {label}")
               

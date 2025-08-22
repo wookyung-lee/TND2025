@@ -42,7 +42,9 @@ class ESN:
         if max_eig > 0:
             Wres *= self.rho / max_eig
 
-        self.Wres = torch.tensor(Wres, dtype=torch.float32, device=device)
+        # self.Wres = torch.tensor(Wres, dtype=torch.float32, device=device)
+        self.Wres = Wres.clone().detach().to(dtype=torch.float32, device=device)
+
 
     def _reservoir_states(self, input_u):
         T = len(input_u)

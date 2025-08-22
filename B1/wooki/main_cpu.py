@@ -2,7 +2,6 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-# from B1.wooki.ESN import *
 from ESN import * 
 
 # Import dictionary
