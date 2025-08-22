@@ -46,7 +46,7 @@ for label in problems:
     for param_name, param_list in zip(['Nres', 'p', 'alpha', 'rho'], 
                                       [Nres_list, p_list, alpha_list, rho_list]):
         # Parallel evaluation of NRMSE for all values
-        nrmse_list = Parallel(n_jobs=-1)(
+        nrmse_list = Parallel(n_jobs=2)(
             delayed(compute_nrmse)(param_name, val, u_train, y_train) for val in param_list
         )
         results[label][param_name] = (param_list, nrmse_list)
