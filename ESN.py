@@ -174,7 +174,7 @@ class ESNBatch:
         self.B = int(batch_size)
         self.Nres = Nres
         self.p = self._expand(p)
-        self.alpha = torch.tensor(self._expand(alpha), device=device, dtype=dtype)
+        self.alpha = torch.tensor(self._expand(alpha), device=device, dtype=dtype).unsqueeze(1)
         self.rho = self._expand(rho)
         self.lambda_reg = self._expand(lambda_reg)
         self.random_state = random_state
@@ -238,7 +238,7 @@ class ESNBatch:
         with torch.no_grad():
             Wres = self.Wres    # (B, N, N)
             Win = self.Win      # (B, N)
-            alpha = torch.tensor(self.alpha, dtype=dtype, device=device).unsqueeze(1)   # (B, 1)
+            alpha = self.alpha  # (B, 1)
             one_minus_alpha = 1.0 - alpha
             
             # Compute new state: (1-α) * x(t) + α * tanh(W_res * x(t) + W_in * u(t))
@@ -350,7 +350,7 @@ class ESNBatch:
             Wres = self.Wres    # (B, N, N)
             Win = self.Win      # (B, N)
             Wout = self.Wout
-            alpha = torch.tensor(self.alpha, dtype=dtype, device=device).unsqueeze(1)   # (B, 1)
+            alpha = self.alpha  # (B, 1)
             one_minus_alpha = 1.0 - alpha
             
             for _ in range(n_steps):
