@@ -6,9 +6,7 @@ from ESN import *
 from skopt import gp_minimize
 from skopt.space import Integer, Real
 
-
-seed = 42
-
+seed = 111
 
 parameter_space = [
     Integer(300, 1000, name="Nres"),
@@ -22,7 +20,7 @@ esn = ESN(random_state=seed)
 def objective(params, u, y):
     esn.Nres, esn.p, esn.alpha, esn.rho = params
     esn._init_weights()
-    nrmse = esn.train(u, y, transient_steps=40000, normalize=True)
+    nrmse = esn.train(u, y) #, transient_steps=40000, normalize=True)
     return nrmse
 
 def main():
@@ -43,8 +41,8 @@ def main():
         
         # Split 50% for training
         N_train = len(data) // 2
-        u_train = data[:N_train]
-        y_train = data[:N_train]
+        u_train = data[:N_train-1]
+        y_train = data[1:N_train]
         
         result = gp_minimize(
             lambda params: objective(params, u_train, y_train), 
@@ -54,14 +52,10 @@ def main():
         )
         
         results[label] = result.x
-    
     print(results)
-
-
 
 if __name__ == "__main__":
     main()
-
 
 """
 Results: [Nres,                      p,              alpha,                   rho]
