@@ -80,7 +80,7 @@ for label in problems:
 # python main.py
 
 # prompt to copy files from local directory to server
-# scp C:\Users\prizl\Documents\GitHub\TND2025\B1\main.py qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/
+# scp C:\Users\prizl\Documents\GitHub\TND2025\B1\hyperparameter_optimization.py qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/
 
 # prompt to copy plots generated inside the cip-pool server to local directory
 # scp -r qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/A2_* "C:/Users/prizl/Documents/GitHub/TND2025/B1/plots"
