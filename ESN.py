@@ -24,7 +24,9 @@ class ESN:
     def _init_weights(self):
         rng = np.random.RandomState(self.random_state)
         # Input weights: Nres x 1 for single input
-        W_in = rng.uniform(-0.5, 0.5, size=(self.Nres,)).astype(np.float32)
+        # W_in = rng.uniform(-0.5, 0.5, size=(self.Nres,)).astype(np.float32)
+        # Bias added
+        W_in = rng.uniform(-0.5, 0.5, size=(self.Nres, 2)).astype(np.float32)
         self.Win = torch.from_numpy(W_in).to(device=device, dtype=dtype)
         
         # Reservoir weights
@@ -65,8 +67,11 @@ class ESN:
             
             # Compute new state: (1-α) * x(t) + α * tanh(W_res * x(t) + W_in * u(t))
             for t in range(T):
-                pre_activation = Wres.matmul(x)
-                pre_activation += Win * u[t]
+                # pre_activation = Wres.matmul(x)
+                # pre_activation += Win * u[t]
+                # Bias added
+                u_with_bias = torch.tensor([1.0, u[t]], dtype=dtype, device=device)  # bias + scalar input
+                pre_activation = Wres.matmul(x) + Win.matmul(u_with_bias)
                 pre_activation.tanh_()
                 x = one_minus_alpha * x + alpha * pre_activation
                 if collect_states:
@@ -136,7 +141,11 @@ class ESN:
             u = u_warmup[-1]
             for _ in range(n_steps):
                 # Compute reservoir state based on previous output
-                x = (1.0 - self.alpha) * self.x + self.alpha * torch.tanh(self.Wres @ self.x + self.Win * u)
+                # x = (1.0 - self.alpha) * self.x + self.alpha * torch.tanh(self.Wres @ self.x + self.Win * u)
+                # Bias added
+                u_with_bias = torch.tensor([1.0, u], dtype=dtype, device=device)
+                x = (1.0 - self.alpha) * self.x + self.alpha * torch.tanh(self.Wres @ self.x + self.Win @ u_with_bias)
+
                 u = torch.dot(self.Wout, x)
                 predictions.append(u.cpu().item())
                 self.x = x
@@ -427,8 +436,11 @@ class ESNNumpy:
     def _init_weights(self):
         rng = np.random.RandomState(self.random_state)
         # Input weights: Nres x 1 for single input
-        self.Win = rng.uniform(-0.5, 0.5, size=(self.Nres,)).astype(np.float32)
-        
+        # self.Win = rng.uniform(-0.5, 0.5, size=(self.Nres,)).astype(np.float32)
+
+        # Added bias: First column = bias, second column = input weight.
+        self.Win = rng.uniform(-0.5, 0.5, size=(self.Nres,2)).astype(np.float32)
+
         # Reservoir weights
         G = nx.erdos_renyi_graph(self.Nres, self.p, directed=True, seed=self.random_state)
         
@@ -463,8 +475,11 @@ class ESNNumpy:
         
         # Compute new state: (1-α) * x(t) + α * tanh(W_res * x(t) + W_in * u(t))
         for t in range(T):
+            # Bias added
+            u_with_bias = np.array([1.0, u[t]], dtype=np.float32)  # [bias, input]
             pre_activation = Wres @ x
-            pre_activation += Win * u[t]
+            # pre_activation += Win * u[t]
+            pre_activation += Win @ u_with_bias
             post_activation = np.tanh(pre_activation)
             x = one_minus_alpha * x + alpha * post_activation
             if collect_states:
@@ -533,7 +548,10 @@ class ESNNumpy:
         
         for _ in range(n_steps):
             # Compute reservoir state based on previous output
-            pre_activation = Wres @ x + Win * u
+            # Bias added
+            u_with_bias = np.array([1.0, u], dtype=np.float32)
+            pre_activation = Wres @ x + Win @ u_with_bias
+            # pre_activation = Wres @ x + Win * u
             post_activation = np.tanh(pre_activation)
             x = one_minus_alpha * x + alpha * post_activation
             u = Wout @ x
