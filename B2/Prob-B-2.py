@@ -13,7 +13,7 @@ transient_pts = 40000  # Washed-out transient points to discard
 dt = 0.005  # Time step used in integration
 warmup_points_list = np.linspace(40001, 130000, 20, dtype=int) -1  # Warm-up points to test (adjust upper bound <= data length)
 train_fraction = 0.5
-normalize = False
+normalize = True
 
 
 
@@ -67,7 +67,7 @@ def main():
             T2_idx = T1_idx + 1 + relative_T2_idx
             T2 = warmup_points[T2_idx]
         else:
-            T2 = 200000
+            T2 = 100000
         
         warmup_times[label] = {"T1": T1, "T2": T2}
         
@@ -79,7 +79,7 @@ def main():
         plt.title(f'NRMSE vs Warm-up Time - Regime {label}')
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"./B2/k/Prob-B-2{label}.png", dpi=600, bbox_inches='tight', pad_inches=0.01)
+        plt.savefig(f"./B2/Prob-B-2{label}.png", dpi=600, bbox_inches='tight', pad_inches=0.01)
         #plt.show()
     
     with open("warmup_times.pkl", "wb") as f:

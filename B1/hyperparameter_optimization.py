@@ -17,7 +17,7 @@ seed = 42
 trials = 80
 repeats = 1
 jobs = 1  # -1 = adapt to CPU
-normalize = False
+normalize = True
 optimizer = "optuna"
 optimizers = ["optuna", "skopt"]
 
