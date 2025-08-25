@@ -141,7 +141,13 @@ class ESN:
                 predictions.append(u.cpu().item())
                 self.x = x
         
-        return np.array(predictions).astype(np.float32)
+        predictions = np.array(predictions).astype(np.float32)
+        
+        if self._norm_params is not None:
+            _, _, mu_y, sigma_y = self._norm_params
+            predictions = predictions * sigma_y + mu_y
+        
+        return predictions
     
     def train_and_test(self, u, y, train_fraction=0.5, transient_steps=40000, warmup_steps=0, normalize=True):
         u = np.asarray(u).astype(np.float32)
@@ -154,18 +160,14 @@ class ESN:
         assert N_train > transient_steps, "transient_steps must be smaller than training steps"
         assert N_test > warmup_steps, "warmup_steps must be smaller than test steps"
         
-        u_train = u[:N_train]
+        u_train = u[:N_train-1]
         u_warmup = u[N_train : N_train + warmup_steps]
-        y_train = y[:N_train]
+        y_train = y[1:N_train]
         y_test = y[N_train + warmup_steps :]
         
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
         y_pred = self.predict(u_warmup, N_test - warmup_steps)
-        
-        if normalize:
-            _, _, mu_y, sigma_y = self._norm_params
-            y_test = (y_test - mu_y) / sigma_y
         
         nrmse_test = np.sqrt(np.mean((y_pred - y_test)**2)) / np.std(y_test)
         
@@ -369,7 +371,13 @@ class ESNBatch:
                 predictions.append(u.cpu().numpy())
                 self.x = x
         
-        return np.stack(predictions, axis=1).astype(np.float32)
+        predictions = np.stack(predictions, axis=1).astype(np.float32)
+        
+        if self._norm_params is not None:
+            _, _, mu_y, sigma_y = self._norm_params
+            predictions = predictions * sigma_y + mu_y
+        
+        return predictions
     
     def train_and_test(self, u, y, train_fraction=0.5, transient_steps=40000, warmup_steps=0, normalize=True):
         u = np.asarray(u).astype(np.float32)
@@ -382,18 +390,14 @@ class ESNBatch:
         assert N_train > transient_steps, "transient_steps must be smaller than training steps"
         assert N_test > warmup_steps, "warmup_steps must be smaller than test steps"
         
-        u_train = u[:N_train]
+        u_train = u[:N_train-1]
         u_warmup = u[N_train : N_train + warmup_steps]
-        y_train = y[:N_train]
+        y_train = y[1:N_train]
         y_test = y[N_train + warmup_steps :]
         
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
         y_pred = self.predict(u_warmup, N_test - warmup_steps)
-        
-        if normalize:
-            _, _, mu_y, sigma_y = self._norm_params
-            y_test = (y_test - mu_y) / sigma_y
         
         mse_test = torch.mean((y_pred - y_test)**2, dim=1)
         denom = torch.std(y_test, dim=1)
@@ -442,7 +446,7 @@ class ESNNumpy:
         if max_eig > 0:
             Wres *= self.rho / max_eig
         
-        self.Wres = Wres
+        self.Wres = Wres.astype(np.float32)
         self.x = np.zeros(self.Nres, dtype=np.float32)
     
     def _run_reservoir(self, u, collect_states=True):        
@@ -536,7 +540,13 @@ class ESNNumpy:
             predictions.append(u)
         
         self.x = x
-        return np.array(predictions).astype(np.float32)
+        predictions = np.array(predictions).astype(np.float32)
+        
+        if self._norm_params is not None:
+            _, _, mu_y, sigma_y = self._norm_params
+            predictions = predictions * sigma_y + mu_y
+        
+        return predictions
     
     def train_and_test(self, u, y, train_fraction=0.5, transient_steps=40000, warmup_steps=0, normalize=True):
         u = np.asarray(u).astype(np.float32)
@@ -547,20 +557,16 @@ class ESNNumpy:
         N_train = int(N * train_fraction)
         N_test = N - N_train
         assert N_train > transient_steps, "transient_steps must be smaller than training steps"
-        assert N_test > warmup_steps, "warmup_steps must be smaller than test steps"
+        #assert N_test > warmup_steps, "warmup_steps must be smaller than test steps"
         
-        u_train = u[:N_train]
-        u_warmup = u[N_train : N_train + warmup_steps]
-        y_train = y[:N_train]
-        y_test = y[N_train + warmup_steps :]
+        u_train = u[:N_train-1]
+        u_warmup = u[:warmup_steps] #u[N_train : N_train + warmup_steps]
+        y_train = y[1:N_train]
+        y_test = y[warmup_steps:] #y[N_train + warmup_steps :]
         
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
-        y_pred = self.predict(u_warmup, N_test - warmup_steps)
-        
-        if normalize:
-            _, _, mu_y, sigma_y = self._norm_params
-            y_test = (y_test - mu_y) / sigma_y
+        y_pred = self.predict(u_warmup, len(u) - warmup_steps)  #self.predict(u_warmup, N_test - warmup_steps)
         
         nrmse_test = np.sqrt(np.mean((y_pred - y_test)**2)) / np.std(y_test)
         
