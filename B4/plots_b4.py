@@ -9,7 +9,7 @@ all_logISI = data["logISI"]
 # Plot
 plt.figure(figsize=(10, 6))
 plt.scatter(all_I, all_logISI, s=1, c="red", alpha=0.5)
-plt.xlabel("Control parameter I")
+plt.xlabel("I[mV]")
 plt.ylabel("log(ISI)")
 plt.title("Problem B4: ESN-based Bifurcation Diagram")
 plt.grid(True)

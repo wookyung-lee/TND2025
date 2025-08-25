@@ -24,7 +24,9 @@ class ESN:
     def _init_weights(self):
         rng = np.random.RandomState(self.random_state)
         # Input weights: Nres x 1 for single input
-        W_in = rng.uniform(-0.5, 0.5, size=(self.Nres,)).astype(np.float32)
+        # W_in = rng.uniform(-0.5, 0.5, size=(self.Nres,)).astype(np.float32)
+        # Bias added
+        W_in = rng.uniform(-0.5, 0.5, size=(self.Nres, 2)).astype(np.float32)
         self.Win = torch.from_numpy(W_in).to(device=device, dtype=dtype)
         
         # Reservoir weights
@@ -65,8 +67,11 @@ class ESN:
             
             # Compute new state: (1-α) * x(t) + α * tanh(W_res * x(t) + W_in * u(t))
             for t in range(T):
-                pre_activation = Wres.matmul(x)
-                pre_activation += Win * u[t]
+                # pre_activation = Wres.matmul(x)
+                # pre_activation += Win * u[t]
+                # Bias added
+                u_with_bias = torch.tensor([1.0, u[t]], dtype=dtype, device=device)  # bias + scalar input
+                pre_activation = Wres.matmul(x) + Win.matmul(u_with_bias)
                 pre_activation.tanh_()
                 x = one_minus_alpha * x + alpha * pre_activation
                 if collect_states:
@@ -136,12 +141,22 @@ class ESN:
             u = u_warmup[-1]
             for _ in range(n_steps):
                 # Compute reservoir state based on previous output
-                x = (1.0 - self.alpha) * self.x + self.alpha * torch.tanh(self.Wres @ self.x + self.Win * u)
+                # x = (1.0 - self.alpha) * self.x + self.alpha * torch.tanh(self.Wres @ self.x + self.Win * u)
+                # Bias added
+                u_with_bias = torch.tensor([1.0, u], dtype=dtype, device=device)
+                x = (1.0 - self.alpha) * self.x + self.alpha * torch.tanh(self.Wres @ self.x + self.Win @ u_with_bias)
+
                 u = torch.dot(self.Wout, x)
                 predictions.append(u.cpu().item())
                 self.x = x
         
-        return np.array(predictions).astype(np.float32)
+        predictions = np.array(predictions).astype(np.float32)
+        
+        if self._norm_params is not None:
+            _, _, mu_y, sigma_y = self._norm_params
+            predictions = predictions * sigma_y + mu_y
+        
+        return predictions
     
     def train_and_test(self, u, y, train_fraction=0.5, transient_steps=40000, warmup_steps=0, normalize=True):
         u = np.asarray(u).astype(np.float32)
@@ -154,18 +169,14 @@ class ESN:
         assert N_train > transient_steps, "transient_steps must be smaller than training steps"
         assert N_test > warmup_steps, "warmup_steps must be smaller than test steps"
         
-        u_train = u[:N_train]
+        u_train = u[:N_train-1]
         u_warmup = u[N_train : N_train + warmup_steps]
-        y_train = y[:N_train]
+        y_train = y[1:N_train]
         y_test = y[N_train + warmup_steps :]
         
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
         y_pred = self.predict(u_warmup, N_test - warmup_steps)
-        
-        if normalize:
-            _, _, mu_y, sigma_y = self._norm_params
-            y_test = (y_test - mu_y) / sigma_y
         
         nrmse_test = np.sqrt(np.mean((y_pred - y_test)**2)) / np.std(y_test)
         
@@ -369,7 +380,13 @@ class ESNBatch:
                 predictions.append(u.cpu().numpy())
                 self.x = x
         
-        return np.stack(predictions, axis=1).astype(np.float32)
+        predictions = np.stack(predictions, axis=1).astype(np.float32)
+        
+        if self._norm_params is not None:
+            _, _, mu_y, sigma_y = self._norm_params
+            predictions = predictions * sigma_y + mu_y
+        
+        return predictions
     
     def train_and_test(self, u, y, train_fraction=0.5, transient_steps=40000, warmup_steps=0, normalize=True):
         u = np.asarray(u).astype(np.float32)
@@ -382,18 +399,14 @@ class ESNBatch:
         assert N_train > transient_steps, "transient_steps must be smaller than training steps"
         assert N_test > warmup_steps, "warmup_steps must be smaller than test steps"
         
-        u_train = u[:N_train]
+        u_train = u[:N_train-1]
         u_warmup = u[N_train : N_train + warmup_steps]
-        y_train = y[:N_train]
+        y_train = y[1:N_train]
         y_test = y[N_train + warmup_steps :]
         
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
         y_pred = self.predict(u_warmup, N_test - warmup_steps)
-        
-        if normalize:
-            _, _, mu_y, sigma_y = self._norm_params
-            y_test = (y_test - mu_y) / sigma_y
         
         mse_test = torch.mean((y_pred - y_test)**2, dim=1)
         denom = torch.std(y_test, dim=1)
@@ -423,8 +436,11 @@ class ESNNumpy:
     def _init_weights(self):
         rng = np.random.RandomState(self.random_state)
         # Input weights: Nres x 1 for single input
-        self.Win = rng.uniform(-0.5, 0.5, size=(self.Nres,)).astype(np.float32)
-        
+        # self.Win = rng.uniform(-0.5, 0.5, size=(self.Nres,)).astype(np.float32)
+
+        # Added bias: First column = bias, second column = input weight.
+        self.Win = rng.uniform(-0.5, 0.5, size=(self.Nres,2)).astype(np.float32)
+
         # Reservoir weights
         G = nx.erdos_renyi_graph(self.Nres, self.p, directed=True, seed=self.random_state)
         
@@ -442,7 +458,7 @@ class ESNNumpy:
         if max_eig > 0:
             Wres *= self.rho / max_eig
         
-        self.Wres = Wres
+        self.Wres = Wres.astype(np.float32)
         self.x = np.zeros(self.Nres, dtype=np.float32)
     
     def _run_reservoir(self, u, collect_states=True):        
@@ -459,8 +475,11 @@ class ESNNumpy:
         
         # Compute new state: (1-α) * x(t) + α * tanh(W_res * x(t) + W_in * u(t))
         for t in range(T):
+            # Bias added
+            u_with_bias = np.array([1.0, u[t]], dtype=np.float32)  # [bias, input]
             pre_activation = Wres @ x
-            pre_activation += Win * u[t]
+            # pre_activation += Win * u[t]
+            pre_activation += Win @ u_with_bias
             post_activation = np.tanh(pre_activation)
             x = one_minus_alpha * x + alpha * post_activation
             if collect_states:
@@ -529,14 +548,23 @@ class ESNNumpy:
         
         for _ in range(n_steps):
             # Compute reservoir state based on previous output
-            pre_activation = Wres @ x + Win * u
+            # Bias added
+            u_with_bias = np.array([1.0, u], dtype=np.float32)
+            pre_activation = Wres @ x + Win @ u_with_bias
+            # pre_activation = Wres @ x + Win * u
             post_activation = np.tanh(pre_activation)
             x = one_minus_alpha * x + alpha * post_activation
             u = Wout @ x
             predictions.append(u)
         
         self.x = x
-        return np.array(predictions).astype(np.float32)
+        predictions = np.array(predictions).astype(np.float32)
+        
+        if self._norm_params is not None:
+            _, _, mu_y, sigma_y = self._norm_params
+            predictions = predictions * sigma_y + mu_y
+        
+        return predictions
     
     def train_and_test(self, u, y, train_fraction=0.5, transient_steps=40000, warmup_steps=0, normalize=True):
         u = np.asarray(u).astype(np.float32)
@@ -549,18 +577,14 @@ class ESNNumpy:
         assert N_train > transient_steps, "transient_steps must be smaller than training steps"
         assert N_test > warmup_steps, "warmup_steps must be smaller than test steps"
         
-        u_train = u[:N_train]
+        u_train = u[:N_train-1]
         u_warmup = u[N_train : N_train + warmup_steps]
-        y_train = y[:N_train]
+        y_train = y[1:N_train]
         y_test = y[N_train + warmup_steps :]
         
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
         y_pred = self.predict(u_warmup, N_test - warmup_steps)
-        
-        if normalize:
-            _, _, mu_y, sigma_y = self._norm_params
-            y_test = (y_test - mu_y) / sigma_y
         
         nrmse_test = np.sqrt(np.mean((y_pred - y_test)**2)) / np.std(y_test)
         
