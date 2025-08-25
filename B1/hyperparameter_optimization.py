@@ -1,5 +1,6 @@
 import sys
 import os
+import pickle
 import numpy as np
 from tqdm import tqdm
 from ESN import *
@@ -14,16 +15,13 @@ from optuna.exceptions import TrialPruned
 
 seed = 42
 trials = 80
-repeats = 3
-jobs = -1  # -1 = adapt to CPU
+repeats = 1
+jobs = 1  # -1 = adapt to CPU
 normalize = True
 optimizer = "optuna"
 optimizers = ["optuna", "skopt"]
 
-
-optuna_cache = {}
-skopt_cache = {}
-
+cache = {}
 
 def load_data():
     print("Importing data ...")
@@ -47,27 +45,24 @@ def evaluate_esn(Nres, p, alpha, rho, u_train, y_train, seed):
     return float(nrmse)
 
 
-def objective_factory(optimizer, u_train, y_train, repeats=repeats):
+def objective_factory(opt_name, u_train, y_train, repeats=repeats, seed=seed, use_cache=True):
     def objective_optuna(trial: optuna.trial.Trial):
         Nres = trial.suggest_int("Nres", 300, 1000)
         p = trial.suggest_float("p", 1e-4, 1.0)
         alpha = trial.suggest_float("alpha", 1e-4, 1.0)
         rho = trial.suggest_float("rho", 1e-4, 1.5)
         
-        cache_key = (Nres, round(float(p), 12), round(float(alpha), 12), round(float(rho), 12))
-        
-        if cache_key in optuna_cache:
-            return optuna_cache[cache_key]
+        cache_key = (int(Nres), round(float(p), 12), round(float(alpha), 12), round(float(rho), 12))
+        if use_cache and cache_key in cache:
+            return cache[cache_key]
         
         scores = []
-        for r in range(repeats):            
-            # vary seed per repeat so reservoirs are different
+        for r in range(repeats):
             iter_seed = seed + 100 * r
             try:
                 score = evaluate_esn(Nres, p, alpha, rho, u_train, y_train, iter_seed)
             except Exception as e:
                 raise
-            
             scores.append(score)
             
             trial.report(float(np.mean(scores)), step=r)
@@ -75,50 +70,50 @@ def objective_factory(optimizer, u_train, y_train, repeats=repeats):
                 raise TrialPruned()
         
         mean_score = float(np.mean(scores))
-        optuna_cache[cache_key] = mean_score
+        if use_cache:
+            cache[cache_key] = mean_score
         return mean_score
     
     def objective_skopt(params):
         Nres, p, alpha, rho = params
+        cache_key = (int(Nres), round(float(p), 12), round(float(alpha), 12), round(float(rho), 12))
+        if use_cache and cache_key in cache:
+            return cache[cache_key]
+        
         scores = []
-        
-        cache_key = (Nres, round(float(p), 12), round(float(alpha), 12), round(float(rho), 12))
-        
-        if cache_key in skopt_cache:
-            return skopt_cache[cache_key]
-        
         for r in range(repeats):
             iter_seed = seed + 100 * r
             try:
-                score = evaluate_esn(Nres, p, alpha, rho, u_train, y_train, iter_seed)
+                score = evaluate_esn(int(Nres), p, alpha, rho, u_train, y_train, iter_seed)
             except Exception as e:
                 raise
-            
             scores.append(score)
         
         mean_score = float(np.mean(scores))
-        skopt_cache[cache_key] = mean_score
+        if use_cache:
+            cache[cache_key] = mean_score
         return mean_score
     
-    if optimizer == "optuna":
+    if opt_name == "optuna":
         return objective_optuna
-    elif optimizer == "skopt":
+    elif opt_name == "skopt":
         return objective_skopt
-    raise ValueError()
+    else:
+        raise ValueError(f"Unknown optimizer: {opt_name}")
 
 
-def optimize_study(label, data, trials=trials):
+def optimize_study(label, data, trials=trials, jobs=jobs, seed=seed):
     data = np.asarray(data, dtype=np.float32)
     N_train = len(data) // 2
     
     u_train = data[:N_train-1]
     y_train = data[1:N_train]
     
-    objective = objective_factory("optuna", u_train, y_train, repeats=repeats)
+    use_cache = False#(jobs == 1) 
+    objective = objective_factory("optuna", u_train, y_train, repeats=repeats, seed=seed, use_cache=use_cache)
     
     sampler = TPESampler(seed=seed)
     pruner = MedianPruner(n_startup_trials=5, n_warmup_steps=1)
-    
     study = optuna.create_study(
         sampler=sampler,
         pruner=pruner,
@@ -127,8 +122,13 @@ def optimize_study(label, data, trials=trials):
         load_if_exists=True
     )
     
-    study.optimize(objective, n_trials=trials, n_jobs=-1, show_progress_bar=True)
+    study.optimize(objective, n_trials=trials, n_jobs=jobs, show_progress_bar=True)
     return study
+
+
+def save_results(obj):
+    with open("optimized_params.pkl", "wb") as f:
+        pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def run_optuna_optimization():
@@ -137,8 +137,9 @@ def run_optuna_optimization():
     results = {}
     
     for label in tqdm(problems):
+        cache = {}
         data = all_data[label]['x']
-        study = optimize_study(label, data, trials=trials)
+        study = optimize_study(label, data, trials=trials, jobs=jobs, seed=seed)
         
         best_params = study.best_params
         best_value = study.best_value
@@ -147,6 +148,7 @@ def run_optuna_optimization():
         results[label] = {"best_params": best_params, "best_value": best_value}
     
     print("Optuna Results: ", results)
+    save_results(results)
 
 
 def run_skopt_optimization():
@@ -162,13 +164,15 @@ def run_skopt_optimization():
     ]
     
     for label in tqdm(problems):
+        cache = {}
         data = all_data[label]['x']
         
         N_train = len(data) // 2
         u_train = data[:N_train-1]
         y_train = data[1:N_train]
         
-        objective = objective_factory("skopt", u_train, y_train, repeats=repeats)
+        use_cache = False#(jobs == 1)
+        objective = objective_factory("skopt", u_train, y_train, repeats=repeats, seed_local=seed, use_cache=use_cache)
         
         result = gp_minimize(
             objective,
@@ -177,8 +181,10 @@ def run_skopt_optimization():
             random_state=seed
         )
         
-        results[label] = result.x
-    print(results)
+        results[label] = {"best_params": result.x, "best_value": result.fun}
+    
+    print("skopt results:", results)
+    save_results(results)
 
 
 def main():
@@ -186,8 +192,8 @@ def main():
         run_optuna_optimization()
     elif optimizer == optimizers[1]:
         run_skopt_optimization()
-    raise ValueError()
-
+    else:
+        raise ValueError()
 
 
 if __name__ == "__main__":
@@ -196,25 +202,11 @@ if __name__ == "__main__":
 
 
 """
-Attention: Values are outdated, correct values are calculated at this moment. Will submit later
-"""
-
-"""
-skopt Results:
+Optuna Results:  
 {
-        [Nres,                      p,              alpha,                   rho]
-    'a': [1000,                    1.0,                1.0,                0.0001],
-    'b': [ 765, 0.00012399193968154343,  0.844824224726829, 0.0056587772905221725], 
-    'c': [1000,  0.0025652928118404484, 0.9097443637903118,                0.0001], 
-    'e': [ 300,   0.005097932353805412, 0.9844819296403085,                0.0001]
-"""
-
-"""
-Optuna Results:
-{
-    'a': {'best_params': {'Nres': 671, 'p': 0.22666924790500015, 'alpha': 0.7702844943973604, 'rho': 0.282880094893985}, 'best_value': 0.0010156501666642725}, 
-    'b': {'best_params': {'Nres': 713, 'p': 0.07292008527632693, 'alpha': 0.5769185573541913, 'rho': 0.2408994896666885}, 'best_value': 0.001097427390050143}, 
-    'c': {'best_params': {'Nres': 918, 'p': 0.08256658276829093, 'alpha': 0.7441466451080895, 'rho': 0.06488940881320321}, 'best_value': 0.00037622313539031893}, 
-    'e': {'best_params': {'Nres': 516, 'p': 0.24345941368690707, 'alpha': 0.21669078403442343, 'rho': 0.5432493223793498}, 'best_value': 0.0008018459775485098}
+    'a': {'best_params': {'Nres': 632, 'p': 0.037253043667155, 'alpha': 0.459272851235089, 'rho': 0.29023141605060604}, 'best_value': 0.0003393310180399567}, 
+    'b': {'best_params': {'Nres': 814, 'p': 0.4498185943886106, 'alpha': 0.9276076641420588, 'rho': 0.314287351371228}, 'best_value': 0.0002586861955933273}, 
+    'c': {'best_params': {'Nres': 902, 'p': 0.5855082690763134, 'alpha': 0.33364729981778907, 'rho': 0.24766302512462152}, 'best_value': 0.00023816426983103156}, 
+    'e': {'best_params': {'Nres': 545, 'p': 0.9349879047529279, 'alpha': 0.7468897985893244, 'rho': 0.23162981573551591}, 'best_value': 0.0002043792192125693}
 }
 """
