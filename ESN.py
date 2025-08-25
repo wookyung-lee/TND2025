@@ -90,7 +90,7 @@ class ESN:
             sigma_y = y[transient_steps:].std() if y[transient_steps:].std() > 0 else 1.0
             u = (u - mu_u) / sigma_u
             y = (y - mu_y) / sigma_y
-            self._norm_params = [mu_u, sigma_u]
+            self._norm_params = [mu_u, sigma_u, mu_y, sigma_y]
         else:
             self._norm_params = None
         
@@ -123,7 +123,7 @@ class ESN:
         
         # if the data was normalized in training, apply z-Transform here as well
         if self._norm_params is not None:
-            mu_u, sigma_u = self._norm_params
+            mu_u, sigma_u, _, _ = self._norm_params
             u_warmup = (u_warmup - mu_u) / sigma_u
         
         # update reservoir state for warmup input
@@ -162,6 +162,11 @@ class ESN:
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
         y_pred = self.predict(u_warmup, N_test - warmup_steps)
+        
+        if normalize:
+            _, _, mu_y, sigma_y = self._norm_params
+            y_test = (y_test - mu_y) / sigma_y
+        
         nrmse_test = np.sqrt(np.mean((y_pred - y_test)**2)) / np.std(y_test)
         
         return nrmse_train, nrmse_test
@@ -289,7 +294,7 @@ class ESNBatch:
             
             u = (u - mu_u) / sigma_u
             y = (y - mu_y) / sigma_y
-            self._norm_params = [mu_u.cpu().numpy(), sigma_u.cpu().numpy()]
+            self._norm_params = [mu_u.cpu().numpy(), sigma_u.cpu().numpy(), mu_y.cpu().numpy(), sigma_y.cpu().numpy()]
         else:
             self._norm_params = None
         
@@ -334,7 +339,7 @@ class ESNBatch:
         
         # normalize here if training was done with normalization
         if self._norm_params is not None:
-            mu_u, sigma_u= self._norm_params
+            mu_u, sigma_u, _, _ = self._norm_params
             mu_u = torch.from_numpy(mu_u).to(device=device, dtype=dtype).squeeze(1)   # (B,)
             sigma_u = torch.from_numpy(sigma_u).to(device=device, dtype=dtype).squeeze(1)
             u_warmup = (u_warmup - mu_u.unsqueeze(1)) / sigma_u.unsqueeze(1)
@@ -385,6 +390,11 @@ class ESNBatch:
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
         y_pred = self.predict(u_warmup, N_test - warmup_steps)
+        
+        if normalize:
+            _, _, mu_y, sigma_y = self._norm_params
+            y_test = (y_test - mu_y) / sigma_y
+        
         mse_test = torch.mean((y_pred - y_test)**2, dim=1)
         denom = torch.std(y_test, dim=1)
         denom[denom == 0.0] = 1.0
@@ -473,7 +483,7 @@ class ESNNumpy:
             sigma_y = y[transient_steps:].std() if y[transient_steps:].std() > 0 else 1.0
             u = (u - mu_u) / sigma_u
             y = (y - mu_y) / sigma_y
-            self._norm_params = [mu_u, sigma_u]
+            self._norm_params = [mu_u, sigma_u, mu_y, sigma_y]
         else:
             self._norm_params = None
         
@@ -502,7 +512,7 @@ class ESNNumpy:
         
         # if the data was normalized in training, apply z-Transform here as well
         if self._norm_params is not None:
-            mu_u, sigma_u = self._norm_params
+            mu_u, sigma_u, _, _ = self._norm_params
             u_warmup = (u_warmup - mu_u) / sigma_u
         
         # update reservoir state for warmup input
@@ -547,6 +557,11 @@ class ESNNumpy:
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
         y_pred = self.predict(u_warmup, N_test - warmup_steps)
+        
+        if normalize:
+            _, _, mu_y, sigma_y = self._norm_params
+            y_test = (y_test - mu_y) / sigma_y
+        
         nrmse_test = np.sqrt(np.mean((y_pred - y_test)**2)) / np.std(y_test)
         
         return nrmse_train, nrmse_test
