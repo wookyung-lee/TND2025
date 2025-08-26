@@ -3,68 +3,78 @@ import matplotlib.pyplot as plt
 from ESN import ESNNumpy
 import pickle
 from tqdm import tqdm
+import networkx as nx
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error
 
 
 seed = 42
 np.random.seed(seed)
-transient_pts = 40000  # Washed-out transient points to discard
-dt = 0.005  # Time step used in integration
-warmup_points_list = np.linspace(40001, 300000, 20, dtype=int) # Warm-up points to test (adjust upper bound <= data length)
 train_fraction = 0.5
-test_length = 10000
-normalize = True
+dt = 0.005
+Tt = 40000
 
 
 class EchoStateNetwork:
-    def __init__(self, N_res, p, alpha, rho):
-        self.N_res = N_res
-        self.p = p
+    def __init__(self, Nres, p, alpha, rho):
+        self.Nres = Nres
         self.alpha = alpha
         self.rho = rho
-        self.Win = np.random.uniform(-0.5, 0.5, (N_res, 1))
-        self.Wres = self.initialize_reservoir(N_res, p, rho)
+        self.p = p
+        self.Win = np.random.uniform(-0.5, 0.5, (Nres, 1))
+        graph = nx.erdos_renyi_graph(Nres, p, directed=True)
+        Wres = nx.to_numpy_array(graph)
+        eigenvalues = np.linalg.eigvals(Wres)
+        spectral_radius = np.max(np.abs(eigenvalues))
+        self.Wres = (Wres / spectral_radius) * rho
+        self.r = np.zeros((Nres, 1))
         self.Wout = None
+        self.ridge = Ridge(alpha=1e-6, fit_intercept=False)
     
-    def initialize_reservoir(self, N_res, p, rho):
-        W = np.random.uniform(-1, 1, (N_res, N_res))
-        mask = np.random.rand(N_res, N_res) < p
-        W[~mask] = 0
-        spectral_radius = np.max(np.abs(np.linalg.eigvals(W)))
-        if spectral_radius > 0:
-            W *= rho / spectral_radius
-        else:
-            print("Warning: spectral radius too small")
-        return W
-
-    def train(self, u, y_target):
-        states = np.zeros((len(u), self.N_res))
-        state = np.zeros(self.N_res)
-        for t in range(len(u)):
-            state = (1 - self.alpha) * state + self.alpha * np.tanh(
-                np.dot(self.Wres, state) + self.Win.flatten() * u[t]
-            )
-            states[t] = state
-        reg = Ridge(alpha=1e-6, fit_intercept=True)
-        reg.fit(states, y_target)
-        self.Wout = reg.coef_.ravel()
-        return states
-
-    def predict(self, u, initial_state=None):
-        states = np.zeros((len(u), self.N_res))
-        if initial_state is not None:
-            state = initial_state.copy()
-        else:
-            state = np.zeros(self.N_res)
-        y_pred = np.zeros(len(u))
-        for t in range(len(u)):
-            state = (1 - self.alpha) * state + self.alpha * np.tanh(
-                np.dot(self.Wres, state) + self.Win.flatten() * u[t]
-            )
-            states[t] = state
-            y_pred[t] = np.dot(self.Wout, state)
-        return y_pred
+    def update_reservoir(self, u):
+        self.r = (1.0 - self.alpha) * self.r + self.alpha * np.tanh(
+            self.Wres @ self.r + self.Win * u
+        )
+        return self.r
+    
+    def calculate_nrmse(self, y_true, y_pred):
+        mse = mean_squared_error(y_true, y_pred)
+        rmse = np.sqrt(mse)
+        nrmse = rmse / np.std(y_true)
+        return nrmse
+    
+    def train(self, u, y, warmup=40000):
+        states = []
+        
+        for ut in u:
+            r = self.update_reservoir(ut)
+            states.append(r.flatten())
+        
+        states = np.array(states)
+        
+        states = states[warmup:]
+        y = y[warmup:]
+        
+        self.ridge.fit(states, y)
+        self.Wout = self.ridge.coef_
+    
+    def predict(self, u, y=None):
+        self.r = np.zeros((self.Nres, 1))
+        
+        predictions = []
+        for ut in u:
+            r = self.update_reservoir(ut)
+            y_pred = self.Wout @ r
+            predictions.append(y_pred.flatten())
+        
+        predictions = np.array(predictions)
+        
+        nrmse = None
+        if y is not None:
+            nrmse = self.calculate_nrmse(y, predictions)
+            
+        return predictions, nrmse
 
 
 def load_data():
@@ -81,78 +91,48 @@ def load_params():
 
 def main():
     all_data = load_data()
-    optimized_params = load_params()
+    #optimized_params = load_params()
     
     warmup_times = {}
     
     for label in tqdm(['a', 'b', 'c', 'e'], desc="Subtasks"):
         data = np.asarray(all_data[label]['x']).flatten()
-        #params = optimized_params[label]['best_params']
         
-        # Ensure warmup points do not exceed training data size
-        max_warmup = len(data) - test_length - 1
-        warmup_points = warmup_points_list[warmup_points_list < max_warmup]
+        warmup_points = np.linspace(40001, 300000, 10, dtype=int)
         
         nrmse_pred_list = []
         for Nwarmup in tqdm(warmup_points, desc="Warmup points"):
-            if Nwarmup <= transient_pts:
-                nrmse_pred_list.append(np.nan)
-                continue
-            
-            #esn = ESNNumpy(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'], random_state=seed)
-            #_, nrmse_pred = esn.train_and_test(
-            #    u=data[:-1], 
-            #    y=data[1:], 
-            #    train_fraction=train_fraction, 
-            #    transient_steps=transient_pts, 
-            #    warmup_steps=Nwarmup, 
-            #    normalize=normalize
-            #)
-            
-            esn = EchoStateNetwork(N_res=875, p=0.8, alpha=0.5, rho=0.9)
-            
-            u_train = data[transient_pts:Nwarmup]
-            if u_train.size < 2:
-                nrmse_pred_list.append(np.nan)
-                continue
-            
-            u_test = data[Nwarmup:Nwarmup + test_length]
-            if u_test.size < 2:
-                nrmse_pred_list.append(np.nan)
-                continue
+            esn = EchoStateNetwork(Nres=875, p=0.8, alpha=0.5, rho=0.9)
             
             scaler = StandardScaler()
-            u_train_reshaped = u_train.reshape(-1, 1)
-            scaler.fit(u_train_reshaped)
+            data_normalized = scaler.fit_transform(data.reshape(-1, 1)).flatten()
             
-            u_train_norm = scaler.transform(u_train_reshaped).flatten()
-            u_train_input = u_train_norm[:-1]
-            y_train_target = u_train_norm[1:]
+            N_train = int(train_fraction * (len(data) - Nwarmup)) + Nwarmup
             
-            if len(u_train_input) == 0:
+            inputs = data_normalized[:-1]
+            targets = data_normalized[1:]
+            if N_train >= len(inputs):
+                # not enough data left for prediction; mark as nan and continue
                 nrmse_pred_list.append(np.nan)
                 continue
             
-            states = esn.train(u_train_input, y_train_target)
-            final_train_state = states[-1]
+            u_train = inputs[:N_train]
+            y_train = targets[:N_train]
+            u_predict = inputs[N_train:]
+            y_predict = targets[N_train:]
             
-            u_test_norm = scaler.transform(u_test.reshape(-1, 1)).flatten()
-            u_test_input = u_test_norm[:-1]
-            y_test_target = u_test_norm[1:]
+            if len(u_train) <= Nwarmup:
+                nrmse_pred_list.append(np.nan)
+                continue
             
-            pred = esn.predict(u_test_input, initial_state=final_train_state)
+            esn.train(u_train, y_train, warmup=Nwarmup)
+            predictions_normalized, _ = esn.predict(u_predict)
             
-            y_pred = scaler.inverse_transform(pred.reshape(-1, 1)).flatten()
-            y_true = scaler.inverse_transform(y_test_target.reshape(-1, 1)).flatten()
+            predictions = scaler.inverse_transform(predictions_normalized)
             
-            mse = np.mean((y_true - y_pred) ** 2)
-            rmse = np.sqrt(mse)
+            true_values = scaler.inverse_transform(y_predict)
+            nrmse = esn.calculate_nrmse(true_values, predictions)
             
-            denom = np.std(y_true)
-            if denom == 0:
-                nrmse = np.nan
-            else:
-                nrmse = rmse / denom
             nrmse_pred_list.append(nrmse)
         
         nrmse_pred_list = np.asarray(nrmse_pred_list)
