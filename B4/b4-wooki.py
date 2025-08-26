@@ -60,8 +60,7 @@ def compute_isis(time_series, threshold=1.0):
     return isis
 
 # Control parameter range
-# I_values = torch.arange(2.5, 3.5 + 0.005, 0.005, device=device)
-I_values = torch.arange(2.5, 3.5, 0.5, device=device)
+I_values = torch.arange(2.5, 3.5 + 0.005, 0.005, device=device)
 log_isis_results_all = {key: [] for key in esn_models.keys()}
 
 # Main loop
