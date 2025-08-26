@@ -93,14 +93,18 @@ for I in I_values:
     scaler = StandardScaler()
     x_normalized = scaler.fit_transform(x.reshape(-1, 1)).flatten()
 
-    training_data = x_normalized[Tt:N_warmup2]
-    esn_optimized.train(training_data[:-1], training_data[1:])
-    predicted = esn_optimized.predict(training_data[:-1])
+    usable_data = x_normalized[Tt:]
+    split_idx = len(usable_data) // 2
+    train_data = usable_data[:split_idx]
+    test_data = usable_data[split_idx:]
+
+    esn_optimized.train(train_data[:-1], train_data[1:])
+    predicted = esn_optimized.predict(test_data[:-1])
     predicted_denormalized = scaler.inverse_transform(predicted.reshape(-1, 1)).flatten()
 
     isis = compute_isis(predicted_denormalized)
     log_isis = np.log(isis) if len(isis) > 0 else [np.nan]
-    log_isis_results.append(log_isis)
+    log_isis_results.append(log_isis
 
 # Draw diagram
 plt.figure(figsize=(12, 8))
