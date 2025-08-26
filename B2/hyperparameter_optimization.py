@@ -17,7 +17,7 @@ seed = 42
 trials = 80
 repeats = 1
 jobs = 1  # -1 = adapt to CPU
-normalize = False
+normalize = True
 optimizer = "optuna"
 optimizers = ["optuna", "skopt"]
 
@@ -50,7 +50,7 @@ def objective_factory(opt_name, u_train, y_train, repeats=repeats, seed=seed, us
         Nres = trial.suggest_int("Nres", 300, 1000)
         p = trial.suggest_float("p", 1e-4, 1.0)
         alpha = trial.suggest_float("alpha", 1e-4, 1.0)
-        rho = trial.suggest_float("rho", 1e-4, 1.5)
+        rho = trial.suggest_float("rho", 0.8, 1.2)
         
         cache_key = (int(Nres), round(float(p), 12), round(float(alpha), 12), round(float(rho), 12))
         if use_cache and cache_key in cache:
@@ -160,7 +160,7 @@ def run_skopt_optimization():
         Integer(300, 1000, name="Nres"),
         Real(1e-4, 1.0, name="p"),
         Real(1e-4, 1.0, name="alpha"),
-        Real(1e-4, 1.5, name="rho")
+        Real(0.8, 1.2, name="rho")
     ]
     
     for label in tqdm(problems):
@@ -204,15 +204,8 @@ if __name__ == "__main__":
 """
 Optuna Results:  
 {
-    'a': {'best_params': {'Nres': 632, 'p': 0.037253043667155, 'alpha': 0.459272851235089, 'rho': 0.29023141605060604}, 'best_value': 0.0003393310180399567}, 
-    'b': {'best_params': {'Nres': 814, 'p': 0.4498185943886106, 'alpha': 0.9276076641420588, 'rho': 0.314287351371228}, 'best_value': 0.0002586861955933273}, 
-    'c': {'best_params': {'Nres': 902, 'p': 0.5855082690763134, 'alpha': 0.33364729981778907, 'rho': 0.24766302512462152}, 'best_value': 0.00023816426983103156}, 
-    'e': {'best_params': {'Nres': 545, 'p': 0.9349879047529279, 'alpha': 0.7468897985893244, 'rho': 0.23162981573551591}, 'best_value': 0.0002043792192125693}
-}
-
-{
-    'a': {'best_params': {'Nres': 728, 'p': 0.13957991126597663, 'alpha': 0.2922154340703646, 'rho': 0.5496061287562082}, 'best_value': 0.00028779252897948027}, 
-    'b': {'best_params': {'Nres': 414, 'p': 0.062089841265991194, 'alpha': 0.7936016109756305, 'rho': 0.6063407607363651}, 'best_value': 0.0002715206937864423}, 
-    'c': {'best_params': {'Nres': 374, 'p': 0.284638845893426, 'alpha': 0.9965251852821025, 'rho': 0.5149532108977859}, 'best_value': 0.00042221671901643276}, 
-    'e': {'best_params': {'Nres': 738, 'p': 0.052115983846589296, 'alpha': 0.6603374425420461, 'rho': 0.3619010867556344}, 'best_value': 0.0004923829110339284}}
+    'a': {'best_params': {'Nres': 333, 'p': 0.9919455079534404, 'alpha': 0.5043661273238631, 'rho': 1.063965261750552}, 'best_value': 0.0005712347337976098}, 
+    'b': {'best_params': {'Nres': 659, 'p': 0.28192894209914016, 'alpha': 0.9019817937722701, 'rho': 0.9796075961238936}, 'best_value': 0.0004226422752253711}, 
+    'c': {'best_params': {'Nres': 542, 'p': 0.9446500233494823, 'alpha': 0.605041141272483, 'rho': 0.8457941008952162}, 'best_value': 0.0005894032656215131}, 
+    'e': {'best_params': {'Nres': 726, 'p': 0.2785517184767674, 'alpha': 0.857564760675654, 'rho': 0.8300096735131435}, 'best_value': 0.0003667937417048961}}
 """
