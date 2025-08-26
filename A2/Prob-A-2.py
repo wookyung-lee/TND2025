@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import pickle
 
 # Hindmarsh-Rose model equations
 def hr_model(state, I, r):
@@ -69,3 +70,7 @@ for label, (I, r) in cases.items():
     # plt.savefig(os.path.join(script_dir, f"Figure_A2_{label}.png"), dpi=300)
     
     # plt.show()
+
+
+with open("timeseries_data.pkl", "wb") as f:
+        pickle.dump(all_data, f, protocol=pickle.HIGHEST_PROTOCOL)

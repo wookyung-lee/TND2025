@@ -1,33 +1,29 @@
-import sys
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 from ESN import ESNNumpy
 import pickle
 from tqdm import tqdm
-
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import StandardScaler
 
 
 seed = 42
 transient_pts = 40000  # Washed-out transient points to discard
 dt = 0.005  # Time step used in integration
-warmup_points_list = np.linspace(40001, 130000, 20, dtype=int) -1  # Warm-up points to test (adjust upper bound <= data length)
+warmup_points_list = np.linspace(40001, 300000, 20, dtype=int) -1  # Warm-up points to test (adjust upper bound <= data length)
 train_fraction = 0.5
 normalize = True
 
 
 
 def load_data():
-    print("Importing data ...")
-    data_folder = os.path.abspath('A2')
-    sys.path.insert(0, data_folder)
-    from A2 import all_data
-    print("Data import complete")
-    return all_data
+    with open("timeseries_data.pkl", "rb") as f:
+        all_data = pickle.load(f)
+        return all_data
 
 
 def load_params():
-    with open("optimized_params.pkl", "rb") as f:
+    with open("optimized_params_rho.pkl", "rb") as f:
         optimized_params = pickle.load(f)
         return optimized_params
 
@@ -47,7 +43,8 @@ def main():
         
         nrmse_pred_list = []
         for Nwarmup in tqdm(warmup_points, desc="Warmup points"):
-            esn = ESNNumpy(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'], random_state=seed)
+            #esn = ESNNumpy(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'], random_state=seed)
+            esn = ESNNumpy(Nres=875, p=0.8, alpha=0.5, rho=0.9, random_state=seed)
             _, nrmse_pred = esn.train_and_test(
                 u=data[:-1], 
                 y=data[1:], 
@@ -67,7 +64,7 @@ def main():
             T2_idx = T1_idx + 1 + relative_T2_idx
             T2 = warmup_points[T2_idx]
         else:
-            T2 = 100000
+            T2 = 200000
         
         warmup_times[label] = {"T1": T1, "T2": T2}
         

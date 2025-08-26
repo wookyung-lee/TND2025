@@ -1,5 +1,3 @@
-import sys
-import os
 import pickle
 import numpy as np
 from tqdm import tqdm
@@ -16,7 +14,7 @@ from optuna.exceptions import TrialPruned
 seed = 42
 trials = 80
 repeats = 1
-jobs = 1  # -1 = adapt to CPU
+jobs = 1
 normalize = True
 optimizer = "optuna"
 optimizers = ["optuna", "skopt"]
@@ -24,12 +22,9 @@ optimizers = ["optuna", "skopt"]
 cache = {}
 
 def load_data():
-    print("Importing data ...")
-    data_folder = os.path.abspath('A2')
-    sys.path.insert(0, data_folder)
-    from A2 import all_data
-    print("Data import complete")
-    return all_data
+    with open("timeseries_data.pkl", "rb") as f:
+        all_data = pickle.load(f)
+        return all_data
 
 
 def evaluate_esn(Nres, p, alpha, rho, u_train, y_train, seed):

@@ -576,19 +576,19 @@ class ESNNumpy:
         
         # calculate steps for different phases
         N = u.shape[0]
-        N_train = int(N * train_fraction)
-        N_test = N - N_train
+        N_train = int(N) #* train_fraction)
+        #N_test = N - N_train
         assert N_train > transient_steps, "transient_steps must be smaller than training steps"
-        assert N_test > warmup_steps, "warmup_steps must be smaller than test steps"
+        #assert N_test > warmup_steps, "warmup_steps must be smaller than test steps"
         
-        u_train = u[:N_train-1]
-        u_warmup = u[N_train : N_train + warmup_steps]
-        y_train = y[1:N_train]
-        y_test = y[N_train + warmup_steps :]
+        u_train = u #u[:N_train-1]
+        u_warmup = u[:warmup_steps] #u[N_train : N_train + warmup_steps]
+        y_train = y #y[1:N_train]
+        y_test = y[warmup_steps:] #y[N_train + warmup_steps :]
         
         # compute NRMSE values for test and predict phase
         nrmse_train = self.train(u_train, y_train, transient_steps, normalize)
-        y_pred = self.predict(u_warmup, N_test - warmup_steps)
+        y_pred = self.predict(u_warmup, N - warmup_steps)
         
         nrmse_test = np.sqrt(np.mean((y_pred - y_test)**2)) / np.std(y_test)
         
