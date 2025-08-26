@@ -14,7 +14,7 @@ from A2 import all_data
 
 # For parallel computing
 def compute_nrmse(param_name, param_value, u_train, y_train):
-    kwargs = {'Nres': 300, 'p': 0.75, 'alpha': 0.5, 'rho': 0.9, 'random_state': 42} # rho in range [0.8,1.2]
+    kwargs = {'Nres': 600, 'p': 0.3, 'alpha': 0.5, 'rho': 0.9, 'random_state': 42} # rho in range [0.8,1.2]
     kwargs[param_name] = param_value
     esn = ESN(**kwargs)    
 
