@@ -106,7 +106,7 @@ for I in I_values:
 plt.figure(figsize=(12, 8))
 for i, I in enumerate(I_values):
     if len(log_isis_results[i]) > 0:
-        plt.scatter([I] * len(log_isis_results[i]), log_isis_results[i], color='red', s=4)
+        plt.scatter([I] * len(log_isis_results[i]), log_isis_results[i], color='#ff00ff', s=4)
 
 plt.xlabel('Control Parameter I')
 plt.ylabel('log(ISI)')
