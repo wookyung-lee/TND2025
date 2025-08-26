@@ -104,7 +104,7 @@ for I in I_values:
 
     isis = compute_isis(predicted_denormalized)
     log_isis = np.log(isis) if len(isis) > 0 else [np.nan]
-    log_isis_results.append(log_isis
+    log_isis_results.append(log_isis)
 
 # Draw diagram
 plt.figure(figsize=(12, 8))
