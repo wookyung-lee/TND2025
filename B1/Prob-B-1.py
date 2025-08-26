@@ -14,7 +14,7 @@ from A2 import all_data
 
 # For parallel computing
 def compute_nrmse(param_name, param_value, u_train, y_train):
-    kwargs = {'Nres': 600, 'p': 0.3, 'alpha': 0.5, 'rho': 0.9, 'random_state': 42} # rho in range [0.8,1.2]
+    kwargs = {'Nres': 600, 'p': 0.7, 'alpha': 0.5, 'rho': 0.9, 'random_state': 42} # rho in range [0.8,1.2]
     kwargs[param_name] = param_value
     esn = ESN(**kwargs)    
 
@@ -59,7 +59,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 # Plot
 for label in problems:
     # Create a folder for this label if it doesn't exist
-    label_dir = os.path.join(base_dir, f"A2_{label}")
+    label_dir = os.path.join(base_dir, f"A-2{label}")
     os.makedirs(label_dir, exist_ok=True)
 
     for param in ['Nres', 'p', 'alpha', 'rho']: 
@@ -84,7 +84,7 @@ for label in problems:
 # python main.py
 
 # prompt to copy files from local directory to server
-# scp C:\Users\prizl\Documents\GitHub\TND2025\B1\hyperparameter_optimization.py qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/
+# scp C:\Users\prizl\Documents\GitHub\TND2025\B1\Prob-B-1.py qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/
 
 # prompt to copy plots generated inside the cip-pool server to local directory
 # scp -r qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/A2_* "C:/Users/prizl/Documents/GitHub/TND2025/B1/plots"
