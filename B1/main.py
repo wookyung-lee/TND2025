@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
 from ESN import * 
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # Import dictionary
 data_folder = os.path.abspath('A2')
 sys.path.insert(0, data_folder)
@@ -12,11 +14,13 @@ from A2 import all_data
 
 # For parallel computing
 def compute_nrmse(param_name, param_value, u_train, y_train):
-    kwargs = {'Nres': 300, 'p': 0.75, 'alpha': 0.5, 'rho': 0.85, 'random_state': 111}
+    kwargs = {'Nres': 300, 'p': 0.75, 'alpha': 0.5, 'rho': 0.9, 'random_state': 42}
     kwargs[param_name] = param_value
     esn = ESN(**kwargs)    
 
     return esn.train(u_train, y_train)
+
+print(f"device: {device}")
 
 # Hyperparameters
 Nres_list = np.linspace(300, 1000, 10, dtype=int)
