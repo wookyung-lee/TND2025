@@ -17,7 +17,7 @@ with open("optimized_params_rho.pkl", "rb") as f:
     optimized_params_rho = pickle.load(f)
 
 # Placeholder warmup times 
-T2_times = {'a': 1000, 'b': 1000, 'c': 1000, 'e': 1000}
+T2_times = {'a': 10000, 'b': 10000, 'c': 10000, 'e': 10000}
 
 # HR neuron model (PyTorch ver.)
 def hr_neuron_model(state, I, r):
@@ -60,7 +60,8 @@ def compute_isis(time_series, threshold=1.0):
     return isis
 
 # Control parameter range
-I_values = torch.arange(2.5, 3.5 + 0.005, 0.005, device=device)
+# I_values = torch.arange(2.5, 3.5 + 0.005, 0.005, device=device)
+I_values = torch.arange(2.5, 3.5, 0.5, device=device)
 log_isis_results_all = {key: [] for key in esn_models.keys()}
 
 # Main loop
@@ -106,17 +107,18 @@ for key, esn in esn_models.items():
 plt.figure(figsize=(12,8))
 colors = {'a':'magenta', 'b':'blue', 'c':'green', 'e':'orange'}
 for key in esn_models.keys():
+    plt.figure(figsize=(12, 8))
     for i, I in enumerate(I_values.cpu()):
         if len(log_isis_results_all[key][i]) > 0:
             plt.scatter([I.item()]*len(log_isis_results_all[key][i]),
                         log_isis_results_all[key][i].numpy(),
                         color=colors[key], s=4, label=key if i==0 else "")
-plt.xlabel('Control Parameter I')
-plt.ylabel('log(ISI)')
-plt.title('Bifurcation Diagram (ESN variants, GPU)')
-plt.grid(True, which='minor', linestyle='-', linewidth=0.5)
-plt.minorticks_on()
-plt.tick_params(which='minor', length=5, color='gray')
-plt.legend()
-plt.savefig('Prob-B-4.png')
-# plt.show()
+            
+    plt.xlabel('Control Parameter I')
+    plt.ylabel('log(ISI)')
+    plt.title(f'Bifurcation Diagram - ESN variant {key}')
+    plt.grid(True, which='minor', linestyle='-', linewidth=0.5)
+    plt.minorticks_on()
+    plt.tick_params(which='minor', length=5, color='gray')
+    plt.savefig(f'Prob-B-4_{key}.png')
+    plt.close()
