@@ -112,9 +112,13 @@ class ESN:
             A = X_res @ X_res.T
             A.diagonal().add_(self.lambda_reg)
             B = X_res @ y_train
-            L = torch.linalg.cholesky(A)
-            # solve LL^T Wout = B
-            self.Wout = torch.cholesky_solve(B.unsqueeze(1), L).squeeze(1)
+            
+            # L = torch.linalg.cholesky(A)
+            # # solve LL^T Wout = B
+            # self.Wout = torch.cholesky_solve(B.unsqueeze(1), L).squeeze(1)
+
+            # Solve Aw = B directly (numerically safer than Cholesky)
+            self.Wout = torch.linalg.solve(A, B.unsqueeze(1)).squeeze(1)
             
             # Predict on training set
             y_pred = X_res.T @ self.Wout
