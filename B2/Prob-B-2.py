@@ -30,47 +30,48 @@ def main():
     #optimized_params = load_params()
     
     optimized_params = {
-        "a" : { 'Nres':760, 'p':0.2, 'alpha':0.7, 'rho':0.9 },
-        "b" : { 'Nres':920, 'p':0.2, 'alpha':0.9, 'rho':0.75 }, 
-        "c" : { 'Nres':450, 'p':0.2, 'alpha':0.7, 'rho':1.05 },
-        "e" : { 'Nres':300, 'p':0.2, 'alpha':0.5, 'rho':1.05 } 
+        #"a" : { 'Nres':760, 'p':0.2, 'alpha':0.7, 'rho':0.9 }
+        "a" : { 'Nres':1500, 'p':0.67, 'alpha':0.7, 'rho':1.2 }
+        #"b" : { 'Nres':920, 'p':0.2, 'alpha':0.9, 'rho':0.75 }, 
+        #"c" : { 'Nres':450, 'p':0.2, 'alpha':0.7, 'rho':1.05 },
+        #"e" : { 'Nres':300, 'p':0.2, 'alpha':0.5, 'rho':1.05 } 
     }
     
     warmup_times = {}
     
-    for label in tqdm(['a', 'b', 'c', 'e'], desc="Subtasks"):
+    for label in tqdm(['a'], desc="Subtasks"):#, 'b', 'c', 'e'], desc="Subtasks"):
         params = optimized_params[label]
+        esn = ESN(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'])
         
         data = np.asarray(all_data[label]['x']).flatten()
-        #data = data[Tt:]
+        data = data[Tt:]
+        N_train = int(train_fraction * len(data))
         
-        #N_train = int(train_fraction * len(data))
+        scaler = StandardScaler()
+        data_normalized = scaler.fit_transform(data.reshape(-1, 1)).flatten()
         
-        warmup_points = np.linspace(Tt + 1, len(data) - 2, 10, dtype=int)
+        inputs = data_normalized[:-1]
+        targets = data_normalized[1:]
+        
+        u_train = inputs[:N_train]
+        y_train = targets[:N_train]
+        
+        esn.train(u_train, y_train)
         
         nrmse_pred_list = []
+        warmup_points = np.linspace(1, len(inputs) - 2, 10, dtype=int)
         for N_warmup in tqdm(warmup_points, desc="Warmup points"):
-            esn = ESN(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'])
+            esn_ = esn.copy()
             
-            scaler = StandardScaler()
-            data_normalized = scaler.fit_transform(data.reshape(-1, 1)).flatten()
+            u_warmup = inputs[:N_warmup]
+            y_autonomous = targets[N_warmup:]
             
-            inputs = data_normalized[:-1]
-            targets = data_normalized[1:]
-            
-            u_train = inputs[:N_warmup]
-            y_train = targets[:N_warmup]
-            u_predict = inputs[N_warmup:]
-            y_predict = targets[N_warmup:]
-            
-            esn.train(u_train, y_train, warmup=Tt)
-            predictions_normalized, _ = esn.predict(u_predict)
+            predictions_normalized, _ = esn_.predict(u_warmup, n_autonomous=len(y_autonomous))
             
             predictions = scaler.inverse_transform(predictions_normalized)
+            true_values = scaler.inverse_transform(y_autonomous)
             
-            true_values = scaler.inverse_transform(y_predict)
-            nrmse = esn.calculate_nrmse(true_values, predictions)
-            
+            nrmse = esn_.calculate_nrmse(true_values, predictions)
             nrmse_pred_list.append(nrmse)
         
         nrmse_pred_list = np.asarray(nrmse_pred_list)
