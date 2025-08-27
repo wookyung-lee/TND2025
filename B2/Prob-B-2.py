@@ -42,14 +42,14 @@ def main():
         params = optimized_params[label]
         
         data = np.asarray(all_data[label]['x']).flatten()
-        data = data[Tt:]
+        #data = data[Tt:]
         
-        N_train = int(train_fraction * len(data))
+        #N_train = int(train_fraction * len(data))
         
-        warmup_points = np.linspace(1, N_train - 2, 10, dtype=int)
+        warmup_points = np.linspace(Tt + 1, len(data) - 2, 10, dtype=int)
         
         nrmse_pred_list = []
-        for Nwarmup in tqdm(warmup_points, desc="Warmup points"):
+        for N_warmup in tqdm(warmup_points, desc="Warmup points"):
             esn = ESN(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'])
             
             scaler = StandardScaler()
@@ -58,12 +58,12 @@ def main():
             inputs = data_normalized[:-1]
             targets = data_normalized[1:]
             
-            u_train = inputs[:N_train]
-            y_train = targets[:N_train]
-            u_predict = inputs[N_train:]
-            y_predict = targets[N_train:]
+            u_train = inputs[:N_warmup]
+            y_train = targets[:N_warmup]
+            u_predict = inputs[N_warmup:]
+            y_predict = targets[N_warmup:]
             
-            esn.train(u_train, y_train, warmup=Nwarmup)
+            esn.train(u_train, y_train, warmup=Tt)
             predictions_normalized, _ = esn.predict(u_predict)
             
             predictions = scaler.inverse_transform(predictions_normalized)
