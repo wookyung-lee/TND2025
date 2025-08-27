@@ -69,8 +69,8 @@ for label, (I, r) in cases.items():
 
 # ---- ESN (Torch, no networkx, stable & minimal) ----
 class ESN:
-    def __init__(self, Nres=600, p=0.02, alpha=0.25, rho=0.9,
-                 lambda_reg=1e-3, in_scale=0.8, fb_scale=0.2, random_state=42):
+    def __init__(self, Nres=600, p=0.02, rho=0.90, alpha=0.30,
+                 lambda_reg=1e-4, in_scale=1.0, fb_scale=1.0, random_state=42):
         self.Nres = int(Nres)
         self.p = float(p)
         self.alpha = float(alpha)
@@ -181,7 +181,7 @@ class ESN:
             y_hat = (self.Wout @ phi_n).squeeze()  # scalar in normalized space
 
             # optional clamp in normalized space to keep stable
-            y_hat = torch.clamp(y_hat, -3.0, 3.0)
+            # y_hat = torch.clamp(y_hat, -3.0, 3.0)
 
             xr.append(float(y_hat))
 
@@ -216,6 +216,24 @@ def load_pickle(path):
     with open(path, "rb") as f:
         return pickle.load(f)
 
+def calibrate_output_gain(esn, u_norm_val):
+    # Build features with same pipeline as training
+    X, _ = esn._reservoir_states(u_norm_val, washout=0)
+    u = torch.tensor(u_norm_val, dtype=torch.float32, device=X.device)
+    X = X[:, :-1]
+    u_feat = u[:-1].unsqueeze(0)
+    bias = torch.ones(1, X.shape[1], device=X.device)
+    Phi = torch.cat([X, bias, u_feat], dim=0)
+    Phi_n = (Phi - esn._feat_mean) / esn._feat_std
+    y_hat = (Phi_n.T @ esn.Wout).cpu().numpy()
+    y = u[1:].cpu().numpy()
+
+    num = float(np.dot(y_hat, y))
+    den = float(np.dot(y_hat, y_hat) + 1e-12)
+    c = num / den
+    # Scale Wout
+    esn.Wout *= c
+    return c
 
 
 def _to_np(x):
@@ -517,40 +535,49 @@ warmups_sec = load_warmup_choices()
 
 
 # ---- Training helper (consistent normalization & washout) ----
-def train_readout_for_regime(x_full, params):
+def train_readout_for_regime(x_full, params, calib_window=5000, min_win=2000, verbose=True):
+    """
+    Train ESN on the first half of the post-transient (t >= 200 s) data, then
+    apply a one-shot output-gain calibration so the autonomous rollout has the
+    correct amplitude when de-normalized.
+
+    Returns:
+        esn  : trained (and calibrated) ESN
+        mu, sd : normalization stats computed from t >= 200 s
+    """
+    # 1) Build ESN with strong drive/feedback and moderate ridge
     esn = ESN(
         Nres=int(params["Nres"]),
         p=float(params["p"]),
         alpha=float(params["alpha"]),
         rho=float(params["rho"]),
-        lambda_reg=1e-6,
+        lambda_reg=1e-4,
+        in_scale=1.0,
+        fb_scale=1.0,
         random_state=42,
     )
 
-    # normalize after washout (>=200s)
-    u = x_full[i_wash_hr:]
-    mu, sd = float(np.mean(u)), float(np.std(u) + 1e-12)
-    u_norm = (u - mu) / sd
+    # 2) Normalize AFTER the 200 s washout (these stats MUST be reused at rollout)
+    u_post = x_full[i_wash_hr:]
+    mu, sd = float(np.mean(u_post)), float(np.std(u_post) + 1e-12)
+    u_norm = (u_post - mu) / sd
 
+    # 3) Train readout (features: [reservoir; bias; u(t)], with row-wise standardization)
     N_train = len(u_norm) // 2
-    u_tr = u_norm[:N_train]
-
-    # states
-    X, _ = esn._reservoir_states(u_tr, washout=500)
-    y = torch.tensor(u_tr[501:], dtype=torch.float32, device=X.device)
-    X = X[:, :-1]
-
-    # ---- add bias term ----
-    ones = torch.ones(1, X.shape[1], device=X.device)
-    Xb = torch.cat([X, ones], dim=0)   # shape (Nres+1, T)
-
-    I = torch.eye(Xb.shape[0], device=X.device)
-    esn.Wout = torch.linalg.solve(Xb @ Xb.T + esn.lambda_reg * I, Xb @ y)
     esn.train(u_norm[:N_train], washout=500)
-    val_err = open_loop_nrmse(esn, u_norm[N_train - 1000:N_train + 5000])  # a small slice around boundary
-    print(f"[{label}] open-loop NRMSE ≈ {val_err:.3f}")
-    esn.has_bias = True  # flag
+
+    # 4) One-shot gain calibration on a short open-loop slice around the boundary
+    a = max(0, N_train - calib_window)
+    b = min(len(u_norm), N_train + calib_window)
+    if b - a >= min_win:
+        c = calibrate_output_gain(esn, u_norm[a:b])
+        if verbose:
+            print(f"[calibration] gain c = {c:.3f}")
+    elif verbose:
+        print("[calibration] skipped (validation window too short)")
+
     return esn, mu, sd
+
 
 # ---- Plot helper ----
 def plot_overlay(label, t, x, esn, mu, sd, T_warm, linestyle, tag):
@@ -624,10 +651,10 @@ for label in ["a", "b", "c", "e"]:
     # enforce reasonable minimums (seconds)
     if label in ("b", "e"):
         T1 = max(T1, 200.0)
-        T2 = max(T2, 700.0)
+        T2 = max(T2, 1000.0)
     else:
         T1 = max(T1, 50.0)
-        T2 = max(T2, 300.0)
+        T2 = max(T2, 1000.0)
     plot_overlay(label, t, x, esn, mu, sd, T1, "-",  f"T1={T1:.0f}s")
     plot_overlay(label, t, x, esn, mu, sd, T2, "--", f"T2={T2:.0f}s")
 
