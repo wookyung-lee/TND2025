@@ -102,16 +102,3 @@ with open("optimal_hyperparams.pkl", "rb") as f:
 print("\nOptimal hyperparameters (with min NRMSE) for each regime:")
 print(loaded_optimal)
 
-# prompt to open a shell session into the server (cip3a0.cip.cs.fau) and land directly in that directory (/proj/ciptmp/qi24jovo/tnd2025)
-# ssh qi24jovo@cip3a0.cip.cs.fau.de
-# cd /proj/ciptmp/qi24jovo/tnd2025
-# conda activate myenv
-# source myenv_proj/bin/activate
-# python Prob-B-1.py
-
-# prompt to copy files from local directory to server
-# scp C:\Users\prizl\Documents\GitHub\TND2025\timeseries_data.pkl qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/
-
-# prompt to copy plots generated inside the cip-pool server to local directory
-# scp -r qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/A-2* "C:/Users/prizl/Documents/GitHub/TND2025/B1/plots"
-

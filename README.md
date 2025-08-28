@@ -80,9 +80,9 @@ python Prob-B-1.py
 
 ## Problem B2 — Analysis
 
-Learning / modeling. Detected model: **Model/analysis per script**.
+Hyperparameter analysis of ESN.
 
-**Dependencies:** ESN_new, matplotlib, numpy, tqdm
+**Dependencies:** ESN, matplotlib, numpy, tqdm
 
 **How to run**
 ```bash
