@@ -26,7 +26,7 @@ from A2 import all_data
 # Function to compute NRMSE for a given hyperparameter
 def compute_nrmse(param_name, param_value, u_train, y_train):
     # kwargs = {'Nres': 600, 'p': 0.7, 'alpha': 0.5, 'rho': 0.9}
-    kwargs = {'Nres': 600, 'p': 0.7, 'alpha': 0.1, 'rho': 0.85}
+    kwargs = {'Nres': 850, 'p': 0.7, 'alpha': 0.1, 'rho': 0.85}
     kwargs[param_name] = param_value
     esn = ESN(**kwargs)
     return esn.train(u_train, y_train)
