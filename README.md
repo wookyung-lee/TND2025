@@ -17,11 +17,12 @@ pip install A2 ESN ESN_new joblib matplotlib numpy torch torchdiffeq tqdm
 ```
 .
 ├── Prob-A-1a.py
+├── Prob-A-2a.py
 ├── Prob-A-2.py
 ├── Prob-B-1.py
 ├── Prob-B-2.py
-├── Prob-B3.py
-├── b4-wooki.py
+├── Prob-B-3.py
+├── Prob-B-4.py
 └── README.md
 ```
 
@@ -37,7 +38,7 @@ Integrates the **Hindmarsh–Rose (HR)** neuron model with RK4 across a current 
 ```bash
 python Prob-A-1a.py
 ```
-**Outputs (detected):**
+**Outputs:**
 - figure: "Prob-A-1a.png", dpi=600, bbox_inches='tight', pad_inches=0.01
 
 **Key parameters (typical in this script):** sweep `I∈[2.5,3.5]` with `ΔI=0.005`, `r=0.003`, `T=1500`, `dt=0.005`, transient `T_t≈200`, threshold `x_th=1.0` (crossing from below). Output figure `Prob-A-1a.png`.
@@ -54,7 +55,7 @@ Simulates HR via fixed‑step RK4 for **five canonical regimes** (periodic/chaot
 ```bash
 python Prob-A-2.py
 ```
-**Outputs (detected):**
+**Outputs:**
 - data: timeseries_data.pkl
 - figure: os.path.join(script_dir, f"Figure_A2_{label}.png"
 
@@ -72,7 +73,7 @@ Learning / modeling. Detected model: **Hindmarsh–Rose (HR) neuron model**.
 ```bash
 python Prob-B-1.py
 ```
-**Outputs (detected):**
+**Outputs:**
 - figure: os.path.join(label_dir, filename
 
 ---
@@ -87,7 +88,7 @@ Learning / modeling. Detected model: **Model/analysis per script**.
 ```bash
 python Prob-B-2.py
 ```
-**Outputs (detected):**
+**Outputs:**
 - data: warmup_times.pkl
 - figure: f"./B2/Prob-B-2{label}.png", dpi=600, bbox_inches='tight', pad_inches=0.01
 
@@ -101,9 +102,9 @@ Phase / Hilbert transform analysis. Detected model: **Model/analysis per script*
 
 **How to run**
 ```bash
-python Prob-B3.py
+python Prob-B-3.py
 ```
-**Outputs (detected):**
+**Outputs:**
 - figure: outfile, dpi=600, bbox_inches='tight', pad_inches=0.01
 
 ---
@@ -116,7 +117,7 @@ Spike analysis / ISI-based metrics. Detected model: **Hindmarsh–Rose (HR) neur
 
 **How to run**
 ```bash
-python b4-wooki.py
+python Prob-B-4.py
 ```
-**Outputs (detected):**
+**Outputs:**
 - figure: f'Prob-B-4_{key}.png'

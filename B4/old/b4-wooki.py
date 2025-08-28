@@ -7,7 +7,7 @@ from torchdiffeq import odeint
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
-from ESN import *
+from ESN_old import *
 # Add path for ESN class (use this to run on your device, e.g. laptop)
 # sys.path.append(r"C:/Users/prizl/Documents/GitHub/TND2025")
 # from ESN import ESN  # Make sure ESN is modified for PyTorch tensors
