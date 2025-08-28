@@ -2,8 +2,9 @@ import sys, os
 import numpy as np
 import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
-from ESN_new import ESN
+from ESN import ESN
 import torch
+import pickle
 
 # Preparation
 seed = 42
@@ -24,7 +25,8 @@ from A2 import all_data
 
 # Function to compute NRMSE for a given hyperparameter
 def compute_nrmse(param_name, param_value, u_train, y_train):
-    kwargs = {'Nres': 600, 'p': 0.7, 'alpha': 0.5, 'rho': 0.9}
+    # kwargs = {'Nres': 600, 'p': 0.7, 'alpha': 0.5, 'rho': 0.9}
+    kwargs = {'Nres': 600, 'p': 0.7, 'alpha': 0.1, 'rho': 0.85}
     kwargs[param_name] = param_value
     esn = ESN(**kwargs)
     return esn.train(u_train, y_train)
@@ -81,17 +83,35 @@ for label in problems:
         plt.savefig(os.path.join(label_dir, filename), dpi=300)
         plt.close()
 
+optimal_params = {}
+for label in problems:
+    optimal_params[label] = {}
+    for param in ['Nres', 'p', 'alpha', 'rho']:
+        x_vals, y_vals = results[label][param]
+        min_idx = np.argmin(y_vals)
+        optimal_params[label][param] = (x_vals[min_idx], y_vals[min_idx])
+
+# Save to pickle
+with open("optimal_hyperparams.pkl", "wb") as f:
+    pickle.dump(optimal_params, f)
+
+# Load back and print
+with open("optimal_hyperparams.pkl", "rb") as f:
+    loaded_optimal = pickle.load(f)
+
+print("\nOptimal hyperparameters (with min NRMSE) for each regime:")
+print(loaded_optimal)
 
 # prompt to open a shell session into the server (cip3a0.cip.cs.fau) and land directly in that directory (/proj/ciptmp/qi24jovo/tnd2025)
 # ssh qi24jovo@cip3a0.cip.cs.fau.de
 # cd /proj/ciptmp/qi24jovo/tnd2025
 # conda activate myenv
 # source myenv_proj/bin/activate
-# python main.py
+# python Prob-B-1.py
 
 # prompt to copy files from local directory to server
 # scp C:\Users\prizl\Documents\GitHub\TND2025\timeseries_data.pkl qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/
 
 # prompt to copy plots generated inside the cip-pool server to local directory
-# scp -r qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/Prob-B-4_* "C:/Users/prizl/Documents/GitHub/TND2025/B4/plots_b4-wooki"
+# scp -r qi24jovo@cip3a0.cip.cs.fau.de:/proj/ciptmp/qi24jovo/tnd2025/A-2* "C:/Users/prizl/Documents/GitHub/TND2025/B1/plots"
 

@@ -1,7 +1,7 @@
 import pickle
 import numpy as np
 from tqdm import tqdm
-from ESN import *
+from ESN_old import *
 from skopt import gp_minimize
 from skopt.space import Integer, Real
 import optuna

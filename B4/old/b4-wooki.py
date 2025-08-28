@@ -52,12 +52,48 @@ for key, val in optimized_params_rho.items():
     )  # already GPU-ready
 
 # Spike interval finder
-def compute_isis(time_series, threshold=1.0):
-    spikes = torch.where((time_series[:-1] < threshold) & (time_series[1:] >= threshold))[0]
-    if len(spikes) < 2:  # need at least 2 spikes to compute ISI
-        return torch.tensor([], device=time_series.device)
-    isis = torch.diff(spikes).float() * dt
-    return isis
+# def compute_isis(time_series, threshold=1.0):
+#     spikes = torch.where((time_series[:-1] < threshold) & (time_series[1:] >= threshold))[0]
+#     if len(spikes) < 2:  # need at least 2 spikes to compute ISI
+#         return torch.tensor([], device=time_series.device)
+#     isis = torch.diff(spikes).float() * dt
+#     return isis
+def compute_isis(timeseries, x_th=1.0) -> list:
+
+    ts = timeseries[0]
+    xs = timeseries[1]
+
+    # Determine threshold crossing from below
+    below_threshold = xs[:-1] < x_th
+    above_threshold = xs[1:] >= x_th
+    crossings = below_threshold & above_threshold
+    
+    batch_size = xs.shape[1]
+    logISIs = []
+    
+    for i in range(batch_size):
+        crossing_mask = crossings[:, i]
+        if not crossing_mask.any():
+            logISIs.append(np.array([]))
+            continue
+        
+        spike_indices = np.nonzero(crossing_mask)[0] + 1
+        spike_times = ts[spike_indices]
+        
+        if len(spike_times) < 2:
+            logISIs.append(np.array([]))
+            continue
+        
+        # Calculate log of inter-spike intervals
+        intervals = np.diff(spike_times)
+        valid_intervals = intervals[intervals > 0]
+        if len(valid_intervals) == 0:
+            logISIs.append(np.array([]))
+        else:
+            logISI = np.log(valid_intervals)
+            logISIs.append(logISI)
+    
+    return logISIs
 
 # Control parameter range
 I_values = torch.arange(2.5, 3.5 + 0.005, 0.005, device=device)

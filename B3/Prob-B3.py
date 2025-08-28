@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 from sklearn.preprocessing import StandardScaler
-from ESN_new import ESN
+from ESN import ESN
 import os
 
 # --- constants to match the project spec ---

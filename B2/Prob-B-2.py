@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from ESN_new import ESN
+from ESN import ESN
 import pickle
 from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler

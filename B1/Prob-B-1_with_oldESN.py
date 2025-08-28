@@ -3,7 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
-from ESN import * 
+from ESN_old import * 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
