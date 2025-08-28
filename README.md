@@ -5,11 +5,11 @@ This repository organizes all six problems from the Theory of Neural Dynamics pr
 ## Environment
 
 - **Python**: 3.9+ recommended
-- **Packages**: A2, ESN, ESN_new, joblib, matplotlib, numpy, torch, torchdiffeq, tqdm
+- **Packages**: A2, ESN, joblib, matplotlib, numpy, torch, torchdiffeq, tqdm
 
 Install (example):
 ```bash
-pip install A2 ESN ESN_new joblib matplotlib numpy torch torchdiffeq tqdm
+pip install A2 ESN joblib matplotlib numpy torch torchdiffeq tqdm
 ```
 
 ## Repository layout (filenames as provided)
@@ -36,7 +36,7 @@ Integrates the **Hindmarsh–Rose (HR)** neuron model with RK4 across a current 
 
 **How to run**
 ```bash
-python Prob-A-1a.py
+python Prob-A-1a.py Prob-A-1b.py
 ```
 **Outputs:**
 - figure: "Prob-A-1a.png", dpi=600, bbox_inches='tight', pad_inches=0.01
@@ -74,8 +74,8 @@ Learning / modeling. Detected model: **Hindmarsh–Rose (HR) neuron model**.
 python Prob-B-1.py
 ```
 **Outputs:**
-- figure: os.path.join(label_dir, filename
-
+- figures of NRMSE vs hyperparameter values for each regime (a, b, c, e) and each hyperparameter (Nres, p, alpha, rho).
+- Pickle file "optimal_hyperparams.pkl" — contains the dictionary of optimal hyperparameters (value + minimum NRMSE) for each regime
 ---
 
 ## Problem B2 — Analysis
