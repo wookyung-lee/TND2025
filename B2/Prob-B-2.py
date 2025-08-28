@@ -30,16 +30,15 @@ def main():
     #optimized_params = load_params()
     
     optimized_params = {
-        #"a" : { 'Nres':760, 'p':0.2, 'alpha':0.7, 'rho':0.9 }
-        "a" : { 'Nres':1500, 'p':0.67, 'alpha':0.7, 'rho':1.2 }
-        #"b" : { 'Nres':920, 'p':0.2, 'alpha':0.9, 'rho':0.75 }, 
-        #"c" : { 'Nres':450, 'p':0.2, 'alpha':0.7, 'rho':1.05 },
-        #"e" : { 'Nres':300, 'p':0.2, 'alpha':0.5, 'rho':1.05 } 
+        "a" : {'Nres':922, 'p':0.9, 'alpha':0.7, 'rho':1.1888889},
+        "b" : {'Nres':1000, 'p':0.5, 'alpha':0.7, 'rho':1.1888889}, 
+        "c" : {'Nres':844, 'p':0.4, 'alpha':0.7, 'rho':1.0333333},
+        "e" : {'Nres':1000, 'p':0.5, 'alpha':0.5, 'rho':1.1888889} 
     }
     
     warmup_times = {}
     
-    for label in tqdm(['a'], desc="Subtasks"):#, 'b', 'c', 'e'], desc="Subtasks"):
+    for label in tqdm(['a', 'b', 'c', 'e'], desc="Subtasks"):
         params = optimized_params[label]
         esn = ESN(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'])
         
@@ -91,7 +90,7 @@ def main():
         plt.title(f'NRMSE vs Warm-up Time - Regime {label}')
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"./B2/Prob-B-2{label}.png", dpi=600, bbox_inches='tight', pad_inches=0.01)
+        plt.savefig(f"./B2/Prob-B-2{label}.png", dpi=600, bbox_inches='tight')
         #plt.show()
     
     with open("warmup_times.pkl", "wb") as f:

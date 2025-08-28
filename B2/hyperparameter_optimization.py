@@ -1,13 +1,15 @@
 import pickle
 import numpy as np
 from tqdm import tqdm
-from ESN_old import *
+from ESN import ESN
 from skopt import gp_minimize
 from skopt.space import Integer, Real
 import optuna
 from optuna.samplers import TPESampler
 from optuna.pruners import MedianPruner
 from optuna.exceptions import TrialPruned
+from sklearn.preprocessing import StandardScaler
+
 
 
 
@@ -18,6 +20,7 @@ jobs = 1
 normalize = True
 optimizer = "optuna"
 optimizers = ["optuna", "skopt"]
+Tt = 40000
 
 cache = {}
 
@@ -27,20 +30,19 @@ def load_data():
         return all_data
 
 
-def evaluate_esn(Nres, p, alpha, rho, u_train, y_train, seed):
-    esn = ESNNumpy(
+def evaluate_esn(Nres, p, alpha, rho, u_train, y_train):
+    esn = ESN(
         Nres=Nres,
         p=p,
         alpha=alpha,
-        rho=rho,
-        random_state=int(seed)
+        rho=rho
     )
     
-    nrmse = esn.train(u_train, y_train, normalize=normalize)
+    nrmse = esn.train(u_train, y_train)
     return float(nrmse)
 
 
-def objective_factory(opt_name, u_train, y_train, repeats=repeats, seed=seed, use_cache=True):
+def objective_factory(opt_name, u_train, y_train, repeats=repeats, use_cache=True):
     def objective_optuna(trial: optuna.trial.Trial):
         Nres = trial.suggest_int("Nres", 300, 1000)
         p = trial.suggest_float("p", 1e-4, 1.0)
@@ -55,7 +57,7 @@ def objective_factory(opt_name, u_train, y_train, repeats=repeats, seed=seed, us
         for r in range(repeats):
             iter_seed = seed + 100 * r
             try:
-                score = evaluate_esn(Nres, p, alpha, rho, u_train, y_train, iter_seed)
+                score = evaluate_esn(Nres, p, alpha, rho, u_train, y_train)
             except Exception as e:
                 raise
             scores.append(score)
@@ -79,7 +81,7 @@ def objective_factory(opt_name, u_train, y_train, repeats=repeats, seed=seed, us
         for r in range(repeats):
             iter_seed = seed + 100 * r
             try:
-                score = evaluate_esn(int(Nres), p, alpha, rho, u_train, y_train, iter_seed)
+                score = evaluate_esn(int(Nres), p, alpha, rho, u_train, y_train)
             except Exception as e:
                 raise
             scores.append(score)
@@ -99,13 +101,17 @@ def objective_factory(opt_name, u_train, y_train, repeats=repeats, seed=seed, us
 
 def optimize_study(label, data, trials=trials, jobs=jobs, seed=seed):
     data = np.asarray(data, dtype=np.float32)
-    N_train = len(data) // 2
+    data = data[Tt:]
     
-    u_train = data[:N_train-1]
-    y_train = data[1:N_train]
+    scaler = StandardScaler()
+    data_normalized = scaler.fit_transform(data.reshape(-1, 1)).flatten()
+    N_train = len(data_normalized) // 2
+    
+    u_train = data_normalized[:N_train-1]
+    y_train = data_normalized[1:N_train]
     
     use_cache = False#(jobs == 1) 
-    objective = objective_factory("optuna", u_train, y_train, repeats=repeats, seed=seed, use_cache=use_cache)
+    objective = objective_factory("optuna", u_train, y_train, repeats=repeats, use_cache=use_cache)
     
     sampler = TPESampler(seed=seed)
     pruner = MedianPruner(n_startup_trials=5, n_warmup_steps=1)
@@ -161,13 +167,17 @@ def run_skopt_optimization():
     for label in tqdm(problems):
         cache = {}
         data = all_data[label]['x']
+        data = data[Tt:]
         
-        N_train = len(data) // 2
+        scaler = StandardScaler()
+        data_normalized = scaler.fit_transform(data.reshape(-1, 1)).flatten()
+        N_train = len(data_normalized) // 2
+        
         u_train = data[:N_train-1]
         y_train = data[1:N_train]
         
         use_cache = False#(jobs == 1)
-        objective = objective_factory("skopt", u_train, y_train, repeats=repeats, seed_local=seed, use_cache=use_cache)
+        objective = objective_factory("skopt", u_train, y_train, repeats=repeats, use_cache=use_cache)
         
         result = gp_minimize(
             objective,
