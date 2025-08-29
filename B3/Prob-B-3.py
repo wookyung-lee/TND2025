@@ -91,7 +91,7 @@ def train_and_predict(label, params, Nwarmup, x_full):
     esn.train(u_train, y_train, warmup=Nwarmup)
 
     # Predict on the post-train half
-    y_pred_norm_hat, _ = esn.predict(u_pred)
+    y_pred_norm_hat, _ = esn.predict_autonomous(u_pred)
 
     # Inverse transform predictions and targets back to original scale
     y_pred_hat = scaler.inverse_transform(np.asarray(y_pred_norm_hat).reshape(-1,1)).flatten()

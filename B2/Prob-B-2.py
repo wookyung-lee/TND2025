@@ -63,12 +63,14 @@ def main():
             esn_ = esn.copy()
             
             u_warmup = inputs[:N_warmup]
-            y_autonomous = targets[N_warmup:]
+            u_predict = inputs[N_warmup:]
+            y_predict = targets[N_warmup:]
             
-            predictions_normalized, _ = esn_.predict(u_warmup, n_autonomous=len(y_autonomous))
+            #predictions_normalized, _ = esn_.predict_autonomous(u_warmup, n_autonomous=len(y_predict))
+            predictions_normalized, _ = esn_.predict_regression(u_warmup, u_predict)
             
             predictions = scaler.inverse_transform(predictions_normalized)
-            true_values = scaler.inverse_transform(y_autonomous)
+            true_values = scaler.inverse_transform(y_predict)
             
             nrmse = esn_.calculate_nrmse(true_values, predictions)
             nrmse_pred_list.append(nrmse)
