@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import networkx as nx
 from sklearn.preprocessing import StandardScaler
-from ESN import ESN
+from reservoirpy.nodes import Reservoir, Ridge
+from sklearn.metrics import mean_squared_error
 import os
 
 # --- constants to match the project spec ---
@@ -17,8 +19,41 @@ N_total = int(T_total / dt)            # total samples
 N_transient = int(Tt / dt)             # 200 / 0.005 = 40000
 
 # Paths
-OUTDIR = "./B3"
+OUTDIR = "./reservoirpy"
 os.makedirs(OUTDIR, exist_ok=True)
+
+def create_esn(Nres, p, alpha, rho):
+    Win = np.random.uniform(-0.5, 0.5, (Nres, 1))
+    
+    graph = nx.erdos_renyi_graph(Nres, p, directed=True)
+    for node in graph.nodes():
+        if np.random.random() < p:
+            graph.add_edge(node, node)
+    Wres = nx.to_numpy_array(graph)
+    Wres = np.where(Wres > 0, np.random.uniform(-1, 1, Wres.shape), Wres)
+    eigenvalues = np.linalg.eigvals(Wres)
+    spectral_radius = np.max(np.abs(eigenvalues))
+    Wres = (Wres / spectral_radius) * rho
+    
+    reservoir = Reservoir(Win=Win, W=Wres, bias=np.zeros(Nres), lr=alpha, input_dim=1, seed=seed)
+    readout = Ridge(ridge=1e-6, fit_bias=False)
+    esn = reservoir >> readout
+    
+    return esn
+
+def predict_autonomous(esn, warmup, n_steps):
+    esn.nodes[0].reset()
+    warumup_preds = esn.run(warmup)
+    
+    predictions = []
+    ut = warumup_preds[-1]
+    
+    for _ in range(n_steps):
+        pred = esn(ut)
+        predictions.append(pred)
+        ut = pred
+    
+    return np.array(predictions)
 
 def load_data():
     with open("../timeseries_data.pkl", "rb") as f:
@@ -57,15 +92,15 @@ def prepare_series(x_full):
     x_after_norm = scaler.fit_transform(x_after.reshape(-1, 1)).flatten()
 
     # build supervised pairs on post-transient segment
-    inputs = x_after_norm[:-1]
-    targets = x_after_norm[1:]
+    inputs = x_after_norm[:-1].reshape(-1, 1)
+    targets = x_after_norm[1:].reshape(-1, 1)
 
     # split 50/50 for train/predict (per spec)
     N = len(inputs)
     N_train = N // 2
     u_train, y_train = inputs[:N_train], targets[:N_train]
     u_pred,  y_pred  = inputs, targets
-
+    
     return t, x, x_after, inputs, targets, u_train, y_train, u_pred, y_pred, scaler
 def safe_nrmse(y_true, y_pred):
     rmse = np.sqrt(np.mean((y_true - y_pred)**2))
@@ -85,13 +120,13 @@ def train_and_predict(label, params, Nwarmup, x_full):
     t, x, x_after, inputs, targets, u_train, y_train, u_pred, y_pred, scaler = prepare_series(x_full)
 
     # Build ESN with given hyperparams
-    esn = ESN(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'])
+    esn = create_esn(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'])
 
     # Train
-    esn.train(u_train, y_train)
+    esn.fit(u_train, y_train)
 
     # Predict on the post-train half
-    y_pred_norm_hat, _ = esn.predict_autonomous(u_pred[:Nwarmup], len(u_pred[Nwarmup:]) )
+    predict_autonomous(esn, u_pred[:Nwarmup], len(u_pred[Nwarmup:]))
 
     # Inverse transform predictions and targets back to original scale
     y_pred_hat = scaler.inverse_transform(np.asarray(y_pred_norm_hat).reshape(-1,1)).flatten()
@@ -168,7 +203,7 @@ def main():
             label, t, x, xr, t_warm_abs,
             style='solid',
             title_suffix=f'(T1: Nwarmup={T1}, NRMSEP={nrmse1:.4f})',
-            outfile=os.path.join(OUTDIR, f"Prob-B-3{label}_T1.png")
+            outfile=os.path.join("./reservoirpy/B3_plots", f"Prob-B-3{label}_T1.png")
         )
 
         # --- Plot with T2 (later warm-up with drop in error) ---
@@ -177,7 +212,7 @@ def main():
             label, t, x, xr, t_warm_abs,
             style='dashed',
             title_suffix=f'(T2: Nwarmup={T2}, NRMSEP={nrmse2:.4f})',
-            outfile=os.path.join(OUTDIR, f"Prob-B-3{label}_T2.png")
+            outfile=os.path.join("./reservoirpy/B3_plots", f"Prob-B-3{label}_T2.png")
         )
 
         print(f"[Regime {label}] Saved: Prob-B-3{label}_T1.png (NRMSEP={nrmse1:.4f}), Prob-B-3{label}_T2.png (NRMSEP={nrmse2:.4f})")
