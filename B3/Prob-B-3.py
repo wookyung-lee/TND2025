@@ -4,6 +4,7 @@ import pickle
 from sklearn.preprocessing import StandardScaler
 from ESN import ESN
 import os
+from tqdm import tqdm
 
 # --- constants to match the project spec ---
 dt = 0.005          # time step
@@ -21,20 +22,20 @@ OUTDIR = "./B3"
 os.makedirs(OUTDIR, exist_ok=True)
 
 def load_data():
-    with open("../timeseries_data.pkl", "rb") as f:
+    with open("timeseries_data.pkl", "rb") as f:
         return pickle.load(f)
 
 def load_warmups():
-    with open("../warmup_times.pkl", "rb") as f:
+    with open("warmup_times_reg.pkl", "rb") as f:
         return pickle.load(f)
 
 def get_optimized_params():
     # Keep consistent with your B2 optimized set (or load if you have a pkl)
     return {
-        "a" : { 'Nres':760, 'p':0.2, 'alpha':0.7, 'rho':0.9 },
-        "b" : { 'Nres':920, 'p':0.2, 'alpha':0.9, 'rho':0.75 },
-        "c" : { 'Nres':450, 'p':0.2, 'alpha':0.7, 'rho':1.05 },
-        "e" : { 'Nres':300, 'p':0.2, 'alpha':0.5, 'rho':1.05 }
+        "a" : {'Nres':922, 'p':0.9, 'alpha':0.7, 'rho':1.1888889},
+        "b" : {'Nres':1000, 'p':0.5, 'alpha':0.7, 'rho':1.1888889}, 
+        "c" : {'Nres':844, 'p':0.4, 'alpha':0.7, 'rho':1.0333333},
+        "e" : {'Nres':1000, 'p':0.5, 'alpha':0.5, 'rho':1.1888889} 
     }
 
 def prepare_series(x_full):
@@ -107,7 +108,7 @@ def train_and_predict(label, params, Nwarmup, x_full):
     # over its prediction window and overlay it on the absolute t axis.
     N_after = len(x_after)               # post-transient samples
     N_half  = N_after // 2               # start of prediction half (in samples after 200)
-    t_pred_start = Tt + N_half * dt
+    t_pred_start = Tt + Nwarmup * dt
 
     # Create an array xr aligned to t; fill NaNs except where we have predictions
     xr = np.full_like(x, np.nan, dtype=float)
@@ -155,7 +156,7 @@ def main():
     # b -> 2(b): chaotic spikes (I=3.34, r=0.003)
     # c -> 2(c): periodic bursts (3 spikes/burst) (I=1.67, r=0.003)
     # e -> 2(e): chaotic bursts (I=3.29, r=0.003)
-    for label in ['a','b','c','e']:
+    for label in tqdm(['a','b','c','e']):
         x_full = all_data[label]['x']
 
         params = params_map[label]
