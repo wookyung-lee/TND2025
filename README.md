@@ -86,7 +86,7 @@ Hyperparameter analysis of ESN.
 
 **How to run**
 ```bash
-python Prob-B-2.py
+python Prob-B-2.py hyperparameter_optimization.py
 ```
 **Outputs:**
 - data: warmup_times.pkl
