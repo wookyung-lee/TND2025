@@ -68,11 +68,16 @@ def prepare_series(x_full):
 
     return t, x, x_after, inputs, targets, u_train, y_train, u_pred, y_pred, scaler
 def safe_nrmse(y_true, y_pred):
+    y_true = np.asarray(y_true).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
+    L = min(len(y_true), len(y_pred))
+    if L == 0:
+        return np.nan
+    y_true = y_true[:L]
+    y_pred = y_pred[:L]
     rmse = np.sqrt(np.mean((y_true - y_pred)**2))
-    denom = np.std(y_true)
-    if denom == 0:
-        return 0.0 if rmse == 0 else np.inf
-    return rmse / denom
+    return rmse / (np.std(y_true) + 1e-12)
+
 
 def train_and_predict(label, params, Nwarmup, x_full):
     """
@@ -88,10 +93,10 @@ def train_and_predict(label, params, Nwarmup, x_full):
     esn = ESN(Nres=params['Nres'], p=params['p'], alpha=params['alpha'], rho=params['rho'])
 
     # Train
-    esn.train(u_train, y_train, warmup=Nwarmup)
+    esn.train(u_train, y_train)
 
     # Predict on the post-train half
-    y_pred_norm_hat, _ = esn.predict(u_pred)
+    y_pred_norm_hat, _ = esn.predict(u_pred, n_autonomous=len(y_pred))
 
     # Inverse transform predictions and targets back to original scale
     y_pred_hat = scaler.inverse_transform(np.asarray(y_pred_norm_hat).reshape(-1,1)).flatten()
@@ -167,7 +172,8 @@ def main():
         plot_overlay(
             label, t, x, xr, t_warm_abs,
             style='solid',
-            title_suffix=f'(T1: Nwarmup={T1}, NRMSEP={nrmse1:.4f})',
+            title_suffix=f'(T1={t_warm_abs:.2f}, Nwarmup={T1}, NRMSEP={nrmse1:.4f})',
+
             outfile=os.path.join(OUTDIR, f"Prob-B-3{label}_T1.png")
         )
 
@@ -176,7 +182,8 @@ def main():
         plot_overlay(
             label, t, x, xr, t_warm_abs,
             style='dashed',
-            title_suffix=f'(T2: Nwarmup={T2}, NRMSEP={nrmse2:.4f})',
+            title_suffix=f'(T2={t_warm_abs:.2f}, Nwarmup={T2}, NRMSEP={nrmse2:.4f})',
+
             outfile=os.path.join(OUTDIR, f"Prob-B-3{label}_T2.png")
         )
 
