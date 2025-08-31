@@ -69,7 +69,7 @@ class ESN:
         nrmse = self.calculate_nrmse(y, y_pred)
         return nrmse
     
-    def predict(self, u_warmup, n_autonomous, y=None):
+    def predict_autonomous(self, u_warmup, n_autonomous, y=None):
         self.r = np.zeros((self.Nres, 1))
         
         for ut in u_warmup:
@@ -83,6 +83,26 @@ class ESN:
             y_pred = self.Wout @ r
             predictions.append(y_pred)
             ut = y_pred
+        
+        predictions = np.array(predictions)
+        
+        nrmse = None
+        if y is not None:
+            nrmse = self.calculate_nrmse(y, predictions)
+        
+        return predictions, nrmse
+    
+    def predict_regression(self, u_warmup, u_predict, y=None):
+        self.r = np.zeros((self.Nres, 1))
+        
+        for ut in u_warmup:
+            self.update_reservoir(ut)
+        
+        predictions = []
+        for ut in u_predict:
+            r = self.update_reservoir(ut)
+            y_pred = self.Wout @ r
+            predictions.append(y_pred)
         
         predictions = np.array(predictions)
         
