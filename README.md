@@ -39,7 +39,8 @@ Integrates the **Hindmarsh–Rose (HR)** neuron model with RK4 across a current 
 python Prob-A-1a.py Prob-A-1b.py
 ```
 **Outputs:**
-- figure: "Prob-A-1a.png", dpi=600, bbox_inches='tight', pad_inches=0.01
+- Prob-A-1a.png
+- Prob-A-1b.png
 
 **Key parameters (typical in this script):** sweep `I∈[2.5,3.5]` with `ΔI=0.005`, `r=0.003`, `T=1500`, `dt=0.005`, transient `T_t≈200`, threshold `x_th=1.0` (crossing from below). Output figure `Prob-A-1a.png`.
 
@@ -78,11 +79,12 @@ python Prob-B-1.py
 - Pickle file "optimal_hyperparams.pkl" — contains the dictionary of optimal hyperparameters (value + minimum NRMSE) for each regime
 ---
 
-## Problem B2 — Analysis
+## Problem B2 — Analysis Warm-up time vs. NRMSE in Prediction
 
-Hyperparameter analysis of ESN.
+Given the hyperparameters from Problem B1, the NRMSE in prediction is calculated for different warm-up parameter values.
+hyperparameter_optimization can be used as an alternative to B1 to get hyperparameters with Optuna/scikit-learn.
 
-**Dependencies:** ESN, matplotlib, numpy, tqdm
+**Dependencies:** ESN, matplotlib, numpy, tqdm, pickle, scikit-learn
 
 **How to run**
 ```bash
@@ -90,7 +92,7 @@ python Prob-B-2.py hyperparameter_optimization.py
 ```
 **Outputs:**
 - data: warmup_times.pkl
-- figure: f"./B2/Prob-B-2{label}.png", dpi=600, bbox_inches='tight', pad_inches=0.01
+- figures: B2/Prob-B-2x.png
 
 ---
 

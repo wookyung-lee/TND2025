@@ -11,6 +11,7 @@ from optuna.exceptions import TrialPruned
 from sklearn.preprocessing import StandardScaler
 
 
+# Alternative for B1
 
 
 seed = 42
