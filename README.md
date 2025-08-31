@@ -67,7 +67,7 @@ python Prob-A-2.py
 
 Learning / modeling. Detected model: **Hindmarsh–Rose (HR) neuron model**.
 
-**Dependencies:** A2, ESN_new, joblib, matplotlib, numpy, torch
+**Dependencies:** A2, ESN, joblib, matplotlib, numpy, torch
 
 **How to run**
 ```bash
