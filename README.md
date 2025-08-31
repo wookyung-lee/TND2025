@@ -66,7 +66,7 @@ python Prob-A-2.py
 
 ## Problem B1 — Analysis
 
-Learning / modeling. Detected model: **Hindmarsh–Rose (HR) neuron model**.
+Hyperparameter sensitivity analysis of an Echo State Network (ESN) on the Hindmarsh–Rose (HR) neuron model).
 
 **Dependencies:** A2, ESN, joblib, matplotlib, numpy, torch
 
@@ -75,8 +75,8 @@ Learning / modeling. Detected model: **Hindmarsh–Rose (HR) neuron model**.
 python Prob-B-1.py
 ```
 **Outputs:**
-- figures of NRMSE vs hyperparameter values for each regime (a, b, c, e) and each hyperparameter (Nres, p, alpha, rho).
-- Pickle file "optimal_hyperparams.pkl" — contains the dictionary of optimal hyperparameters (value + minimum NRMSE) for each regime
+- figures: plots of NRMSE vs hyperparameter values for each regime (a, b, c, e) and each hyperparameter (Nres, p, alpha, rho).
+- data: optimal_hyperparams.pkl — contains the dictionary of optimal hyperparameters (value + minimum NRMSE) for each regime
 ---
 
 ## Problem B2 — Analysis Warm-up time vs. NRMSE in Prediction
@@ -88,7 +88,7 @@ hyperparameter_optimization can be used as an alternative to B1 to get hyperpara
 
 **How to run**
 ```bash
-python Prob-B-2.py hyperparameter_optimization.py
+python Prob-B-2.py
 ```
 **Outputs:**
 - data: warmup_times.pkl
